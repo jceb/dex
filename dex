@@ -1,0 +1,504 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# Author:		Jan Christoph Ebersbach <jceb@e-jc.de>
+# Last Modified: Sat 12. Jun 2010 15:28:17 +0200 CEST
+# Description:	dex, DesktopEntry Execution, is a program to execute DesktopEntry files of type Application
+
+import glob
+import os
+import subprocess
+import sys
+
+def which(filename):
+	path = os.environ.get('PATH', None)
+	if path:
+		for p in path.split(os.pathsep):
+			f = os.path.join(p, filename)
+			if os.path.isfile(f):
+				return f
+
+class DesktopEntryTypeException(Exception):
+	def __init__(self, value):
+		self.value = value
+
+	def __str__(self):
+		return repr(self.value)
+
+class ApplicationExecException(Exception):
+	def __init__(self, value):
+		self.value = value
+
+	def __str__(self):
+		return repr(self.value)
+
+class DesktopEntry(object):
+	"""
+	Implements some parts of Desktop Entry specification: http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-1.1.html
+	"""
+	def __init__(self, filename):
+		"""
+		@param	filename	Desktop Entry File
+		"""
+		if not os.path.isfile(filename):
+			raise ValueError('File does not exist: %s' % filename)
+		self._filename = filename
+		self.groups = None
+		self.entries = None # Link to default group "Desktop Entry"
+
+	def __str__(self):
+		if self.Name:
+			return self.Name
+		return self.filename
+
+	@property
+	def filename(self):
+		"""
+		The absolute filename
+		"""
+		return self._filename
+
+	def load(self):
+		"""Load or reload contents of desktop entry file"""
+		self.groups = {} # clear settings
+		self.entries = None # clear settings
+
+		f = open(self.filename, 'r')
+		current_group = None
+		try:
+			for l in f.readlines():
+				l = l.strip('\n')
+				# handle comments and empty lines
+				if l.startswith('#') or l.strip() == '':
+					continue
+
+				# handle groups
+				if l.startswith('['):
+					if not l.endswith(']'):
+						raise ValueError("'%s' is not a valid Desktop Entry because of line '%s'." % (self.filename, l))
+					group = l[1:-1]
+					if self.groups.get(group, None):
+						raise ValueError("'%s' is not a valid Desktop Entry because group '%s' is specified multiple times." % (self.filename, group))
+					current_group = group
+					self.groups[group] = {}
+					if group == 'Desktop Entry':
+						self.entries = self.groups[group]
+					continue
+
+				# handle all the other lines
+				if not current_group:
+					raise ValueError("'%s' is not a valid Desktop Entry because line '%s' does not belong to a group." % (self.filename, l))
+				kv = l.split('=', 1)
+				if len(kv) != 2 or kv[0] == '':
+					raise ValueError("'%s' is not a valid Desktop Entry because line '%s' is not a valid key=value pair." % (self.filename, l))
+				k = kv[0]
+				v = kv[1]
+				# TODO: parse k for locale specific settings
+				# TODO: parse v for multivalue fields
+				self.groups[current_group][k] = v
+		except Exception, e:
+			f.close()
+			raise e
+		finally:
+			f.close()
+
+		if not self.entries:
+			raise ValueError("'%s' is not a valid Desktop Entry group is missing." % (self.filename, ))
+		if not (self.entries.get('Type', None) and self.entries.get('Name', None)):
+			raise ValueError("'%s' is not a valid Desktop Entry because Type or Name keys are missing." % (self.filename, ))
+		_type = self.entries.get('Type', None)
+		if  _type == 'Application':
+			if not self.entries.get('Exec', None):
+				raise ValueError("'%s' is not a valid Desktop Entry of type '%s' because Exec is missing." % (self.filename, _type))
+		elif  _type == 'Link':
+			if not self.entries.get('URL', None):
+				raise ValueError("'%s' is not a valid Desktop Entry of type '%s' because URL is missing." % (self.filename, _type))
+		elif  _type == 'Directory':
+			pass
+		else:
+			raise ValueError("'%s' is not a valid Desktop Entry because Type '%s' is unkown." % (self.filename, self.entries.get('Type', None)))
+
+	# another name for load
+	reload = load
+
+	def _get_value(self, key, group='Desktop Entry', default=None):
+		if not self.groups:
+			self.load()
+		if not self.groups.has_key(group):
+			raise KeyError("Group '%s' not found." % group)
+		grp = self.groups[group]
+		if not grp.has_key(key):
+			return default
+		return grp[key]
+
+	def get_boolean(self, key, group='Desktop Entry', default=False):
+		val = self._get_value(key, group=group, default=default)
+		if type(val) == bool:
+			return val
+		if val in ['true', 'True']:
+			return True
+		if val in ['false', 'False']:
+			return False
+		raise ValueError("'%s's value '%s' in group '%s' is not a boolean value." % (key, val, group))
+
+	def get_string(self, key, group='Desktop Entry', default=''):
+		return self._get_value(key, group=group, default=default)
+
+	def get_strings(self, key, group='Desktop Entry', default=''):
+		raise Exception("Not implemented yet.")
+
+	def get_localestring(self, key, group='Desktop Entry', default=''):
+		raise Exception("Not implemented yet.")
+
+	def get_numeric(self, key, group='Desktop Entry', default=0.0):
+		val = self._get_value(key, group=group, default=default)
+		if type(val) == float:
+			return val
+		return float(val)
+
+	@property
+	def Type(self):
+		return self.get_string('Type')
+
+	@property
+	def Version(self):
+		return self.get_string('Version')
+
+	@property
+	def Name(self):
+		# SHOULD be localestring!
+		return self.get_string('Name')
+
+	@property
+	def GenericName(self):
+		return self.get_localestring('GenericName')
+
+	@property
+	def NoDisplay(self):
+		return self.get_boolean('NoDisplay')
+
+	@property
+	def Comment(self):
+		return self.get_localestring('Comment')
+
+	@property
+	def Icon(self):
+		return self.get_localestring('Icon')
+
+	@property
+	def Hidden(self):
+		return self.get_boolean('Hidden')
+
+	@property
+	def OnlyShowIn(self):
+		return self.get_strings('OnlyShowIn')
+
+	@property
+	def NotShowIn(self):
+		return self.get_strings('NotShowIn')
+
+	@property
+	def TryExec(self):
+		return self.get_string('TryExec')
+
+	@property
+	def Exec(self):
+		return self.get_string('Exec')
+
+	@property
+	def Path(self):
+		return self.get_string('Path')
+
+	@property
+	def Terminal(self):
+		return self.get_boolean('Terminal')
+
+	@property
+	def MimeType(self):
+		return self.get_strings('MimeType')
+
+	@property
+	def Categories(self):
+		return self.get_strings('Categories')
+
+	@property
+	def StartupNotify(self):
+		return self.get_boolean('StartupNotify')
+
+	@property
+	def StartupWMClass(self):
+		return self.get_string('StartupWMClass')
+
+	@property
+	def URL(self):
+		return self.get_string('URL')
+
+class Application(DesktopEntry):
+	"""
+	Implements application files
+	"""
+
+	def __init__(self, filename):
+		"""
+		@param	filename	Absolute path to a Desktop Entry File
+		"""
+		super(Application, self).__init__(filename)
+		if self.Type != 'Application':
+			raise ValueError("'%s' is not of type 'Application'." % self.filename)
+
+	@classmethod
+	def _build_cmd(cls, exec_string, needs_terminal=False):
+		"""
+		>>> Application._build_cmd('gvim')
+		['gvim']
+		>>> Application._build_cmd('gvim test')
+		['gvim', 'test']
+		>>> Application._build_cmd('"gvim" test')
+		['gvim', 'test']
+		>>> Application._build_cmd('"gvim test"')
+		['gvim test']
+		>>> Application._build_cmd('"gvim test" test2 "test \\\\" 3"')
+		['gvim test', 'test2', 'test " 3']
+		>>> Application._build_cmd(r'"test \\\\\\\\ \\" moin" test')
+		['test \\\\ " moin', 'test']
+		>>> Application._build_cmd(r'"gvim \\\\\\\\ \\`test\\$"')
+		['gvim \\\\ `test$']
+		>>> Application._build_cmd(r'vim ~/.vimrc', True)
+		['x-terminal-emulator', '-c', 'vim', '~/.vimrc']
+		>>> Application._build_cmd('vim ~/.vimrc', False)
+		['vim', '~/.vimrc']
+		>>> Application._build_cmd("vim '~/.vimrc test'", False)
+		['vim', '~/.vimrc test']
+		>>> Application._build_cmd('vim \\'~/.vimrc " test\\'', False)
+		['vim', '~/.vimrc " test']
+		>>> Application._build_cmd('sh -c \\'vim ~/.vimrc " test\\'', False)
+		['sh', '-c', 'vim ~/.vimrc " test']
+		>>> Application._build_cmd("sh -c 'vim ~/.vimrc \\" test\\"'", False)
+		['sh', '-c', 'vim ~/.vimrc " test"']
+		"""
+		cmd = []
+		if needs_terminal:
+			cmd += ['x-terminal-emulator', '-c']
+		_tmp = exec_string.replace('\\\\', '\\')
+		_arg = ''
+		in_esc = False
+		in_quote = False
+		in_singlequote = False
+
+		for c in _tmp:
+			if in_esc:
+				_arg += c
+				in_esc = False
+				continue
+
+			if c == '"':
+				if in_quote:
+					in_quote = False
+					cmd.append(_arg)
+					_arg = ''
+					continue
+				if not in_singlequote:
+					in_quote = True
+					continue
+
+			if c == "'":
+				if in_singlequote:
+					in_singlequote = False
+					cmd.append(_arg)
+					_arg = ''
+					continue
+				if not in_quote:
+					in_singlequote = True
+					continue
+
+			if c == '\\':
+				in_esc = True
+				continue
+
+			if c == ' ' and not (in_quote or in_singlequote):
+				if not _arg:
+					continue
+				cmd.append(_arg)
+				_arg = ''
+				continue
+
+			_arg += c
+
+		if _arg and not (in_esc or in_quote or in_singlequote):
+			cmd.append(_arg)
+		elif _arg:
+			raise ValueError('Exec value is unbalanced.')
+
+		return cmd
+
+	def execute(self, dry=False, verbose=False):
+		"""
+		Execute application
+		@return	Return subprocess.Popen object
+		"""
+		_exec = True
+		_try = self.TryExec
+		if _try \
+			and not (os.path.isabs(_try) and os.path.isfile(_try)) \
+			and not which(_try):
+			_exec = False
+
+		if _exec:
+			cmd = self._build_cmd(self.Exec)
+			if not cmd:
+				raise ApplicationExecException('Failed to build command string.')
+			# TODO: implement handling of terminals
+			if dry or verbose:
+				print 'Executing command: ' + ' '.join(cmd) + ' ' + str(len(cmd))
+			if dry:
+				return None
+			return subprocess.Popen(cmd)
+
+
+class AutostartFile(Application):
+	"""
+	Implements autostart files
+	"""
+
+	def __init__(self, filename):
+		"""
+		@param	filename	Absolute path to a Desktop Entry File
+		"""
+		if not os.path.isabs(filename):
+			raise ValueError('Filename is not an absolute path: %s' % filename)
+		super(AutostartFile, self).__init__(filename)
+		self._basename = os.path.basename(filename)
+
+	def __cmp__(self, y):
+		"""
+		@param	y	The object to compare the current object with - comparison is made on the property of basename
+		"""
+		if type(y) == type(self):
+			return cmp(y.basename, self.basename)
+		return -1
+
+	@property
+	def basename(self):
+		"""
+		The basename of file
+		"""
+		return self._basename
+
+def get_autostart_directories():
+	"""
+	Generate the list of autostart directories
+	"""
+	autostart_directories = [] # autostart directories, ordered by preference
+
+	# generate list of autostart directories
+	if os.environ.get('XDG_CONFIG_HOME', None):
+		autostart_directories.append(os.path.join(os.environ.get('XDG_CONFIG_HOME'), 'autostart'))
+	else:
+		autostart_directories.append(os.path.join(os.environ['HOME'], '.config', 'autostart'))
+
+	if os.environ.get('XDG_CONFIG_DIRS', None):
+		for d in os.environ['XDG_CONFIG_DIRS'].split(os.pathsep):
+			if not d:
+				continue
+			autostart_directories.append(os.path.join(d, 'autostart'))
+	else:
+		autostart_directories.append(os.path.join('/etc/xdg/autostart'))
+
+	return autostart_directories
+
+
+def get_autostart_files(parse_gnome_autostart=True, verbose=False):
+	"""
+	Generate a list of autostart files according to autostart-spec 0.5
+
+	TODO: do filetype recognition according to spec
+	"""
+	autostart_files = [] # autostart files, excluding files marked as hidden
+	hidden_autostart_files = []
+
+	for d in get_autostart_directories():
+		for f in glob.glob1(d, '*.desktop'):
+			_f = os.path.join(d, f)
+			if not os.path.isfile(_f):
+				continue
+			af = None
+			try:
+				af = AutostartFile(_f)
+			except DesktopEntryTypeException, e:
+				if verbose:
+					print e
+				continue
+
+			if af in autostart_files or af in hidden_autostart_files:
+				if verbose:
+					print 'Ignoring file, overridden by other autostart file: %s' % af.filename
+				continue
+			if af.Hidden:
+				if verbose:
+					print 'Ignoring file, hidden attribute is set: %s' % af.filename
+				hidden_autostart_files.append(af)
+				continue
+			if parse_gnome_autostart and not af.get_boolean('X-GNOME-Autostart-enabled', default=True):
+				if verbose:
+					print 'Ignoring file, gnome autostart disabled: %s' % af.filename
+				hidden_autostart_files.append(af)
+				continue
+			if verbose:
+				print 'Using file for autostart: %s' % af.filename
+			autostart_files.append(af)
+	return autostart_files
+
+def _test():
+	import doctest
+	doctest.testmod()
+
+if __name__ == '__main__':
+	from optparse import OptionParser
+
+	parser = OptionParser()
+	parser.add_option("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
+	parser.add_option("-d", "--dry", action="store_true", dest="dry", help="dry run, don't execute any command")
+	parser.add_option("-t", "--test", action="store_true", dest="test", help="run the tests")
+	parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="verbose output")
+	parser.set_defaults(dry=False, test=False)
+	parser.set_usage('%prog [Options] [DesktopEntryFile] ..')
+	parser.set_description('dex, DesktopEntry Execution, is a program to execute DesktopEntry files of type Application')
+
+	(options, args) = parser.parse_args()
+
+	exit_value = 0
+
+	# run tests
+	if options.test:
+		_test()
+
+	# perform autostart
+	elif options.autostart:
+		if options.dry and options.verbose:
+			print 'Dry run, nothing is executed.'
+
+		for a in get_autostart_files(verbose=options.verbose):
+			try:
+				a.execute(dry=options.dry, verbose=options.verbose)
+			except Exception, e:
+				exit_value = 1
+				print >> sys.stderr, "Execution faild: %s" % e
+
+	# execute specified DesktopEntry files
+	else:
+		if options.dry and options.verbose:
+			print 'Dry run, nothing is executed.'
+
+		if not args:
+			print >> sys.stderr, "Nothing to execute, no DesktopEntry files specified!"
+			parser.print_help()
+			exit_value = 1
+		else:
+			for f in args:
+				try:
+					app = Application(f)
+					app.execute(verbose=options.verbose)
+				except ValueError, e:
+					exit_value = 1
+					print >> sys.stderr, "Execution faild: %s" % e
+	sys.exit(exit_value)
