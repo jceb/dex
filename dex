@@ -2,22 +2,44 @@
 # -*- coding: utf-8 -*-
 
 # Author:		Jan Christoph Ebersbach <jceb@e-jc.de>
-# Last Modified: Sat 12. Jun 2010 15:28:17 +0200 CEST
-# Description:	dex, DesktopEntry Execution, is a program to execute DesktopEntry files of type Application
+# Last Modified: Sat 12. Jun 2010 18:17:27 +0200 CEST
+
+# dex
+# DesktopEntry Execution, is a program to execute DesktopEntry files of type Application
+#
+# Depends: None
+#
+# Copyright (C) 2010 Jan Christoph Ebersbach
+#
+# http://www.e-jc.de/
+#
+# All rights reserved.
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License version 2 as
+# published by the Free Software Foundation.
+#
+# Binary versions of this file provided by Univention to you as
+# well as other copyrighted, protected or trademarked materials like
+# Logos, graphics, fonts, specific documentations and configurations,
+# cryptographic keys etc. are subject to a license agreement between
+# you and Univention.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 import glob
 import os
 import subprocess
 import sys
 
-def which(filename):
-	path = os.environ.get('PATH', None)
-	if path:
-		for p in path.split(os.pathsep):
-			f = os.path.join(p, filename)
-			if os.path.isfile(f):
-				return f
-
+# DesktopEntry exceptions
 class DesktopEntryTypeException(Exception):
 	def __init__(self, value):
 		self.value = value
@@ -32,6 +54,7 @@ class ApplicationExecException(Exception):
 	def __str__(self):
 		return repr(self.value)
 
+# DesktopEntry class definitions
 class DesktopEntry(object):
 	"""
 	Implements some parts of Desktop Entry specification: http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-1.1.html
@@ -327,11 +350,11 @@ class Application(DesktopEntry):
 		if _arg and not (in_esc or in_quote or in_singlequote):
 			cmd.append(_arg)
 		elif _arg:
-			raise ValueError('Exec value is unbalanced.')
+			raise ApplicationExecException('Exec value contains an unbalanced number of quote characters.')
 
 		return cmd
 
-	def execute(self, dry=False, verbose=False):
+	def execute(self, dryrun=False, verbose=False):
 		"""
 		Execute application
 		@return	Return subprocess.Popen object
@@ -347,13 +370,11 @@ class Application(DesktopEntry):
 			cmd = self._build_cmd(self.Exec)
 			if not cmd:
 				raise ApplicationExecException('Failed to build command string.')
-			# TODO: implement handling of terminals
-			if dry or verbose:
-				print 'Executing command: ' + ' '.join(cmd) + ' ' + str(len(cmd))
-			if dry:
+			if dryrun or verbose:
+				print 'Executing command: ' + ' '.join(cmd)
+			if dryrun:
 				return None
 			return subprocess.Popen(cmd)
-
 
 class AutostartFile(Application):
 	"""
@@ -384,6 +405,15 @@ class AutostartFile(Application):
 		"""
 		return self._basename
 
+# local methods
+def which(filename):
+	path = os.environ.get('PATH', None)
+	if path:
+		for p in path.split(os.pathsep):
+			f = os.path.join(p, filename)
+			if os.path.isfile(f):
+				return f
+
 def get_autostart_directories():
 	"""
 	Generate the list of autostart directories
@@ -406,7 +436,6 @@ def get_autostart_directories():
 
 	return autostart_directories
 
-
 def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 	"""
 	Generate a list of autostart files according to autostart-spec 0.5
@@ -426,7 +455,7 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 				af = AutostartFile(_f)
 			except DesktopEntryTypeException, e:
 				if verbose:
-					print e
+					print >> sys.stderr, e
 				continue
 
 			if af in autostart_files or af in hidden_autostart_files:
@@ -444,7 +473,7 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 				hidden_autostart_files.append(af)
 				continue
 			if verbose:
-				print 'Using file for autostart: %s' % af.filename
+				print 'Autostart file: %s' % af.filename
 			autostart_files.append(af)
 	return autostart_files
 
@@ -452,15 +481,16 @@ def _test():
 	import doctest
 	doctest.testmod()
 
+# start execution
 if __name__ == '__main__':
 	from optparse import OptionParser
 
 	parser = OptionParser()
 	parser.add_option("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
-	parser.add_option("-d", "--dry", action="store_true", dest="dry", help="dry run, don't execute any command")
+	parser.add_option("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
 	parser.add_option("-t", "--test", action="store_true", dest="test", help="run the tests")
 	parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="verbose output")
-	parser.set_defaults(dry=False, test=False)
+	parser.set_defaults(dryrun=False, test=False, autostart=False, verbose=False)
 	parser.set_usage('%prog [Options] [DesktopEntryFile] ..')
 	parser.set_description('dex, DesktopEntry Execution, is a program to execute DesktopEntry files of type Application')
 
@@ -474,19 +504,19 @@ if __name__ == '__main__':
 
 	# perform autostart
 	elif options.autostart:
-		if options.dry and options.verbose:
+		if options.dryrun and options.verbose:
 			print 'Dry run, nothing is executed.'
 
 		for a in get_autostart_files(verbose=options.verbose):
 			try:
-				a.execute(dry=options.dry, verbose=options.verbose)
-			except Exception, e:
+				a.execute(dryrun=options.dryrun, verbose=options.verbose)
+			except ApplicationExecException, e:
 				exit_value = 1
 				print >> sys.stderr, "Execution faild: %s" % e
 
 	# execute specified DesktopEntry files
 	else:
-		if options.dry and options.verbose:
+		if options.dryrun and options.verbose:
 			print 'Dry run, nothing is executed.'
 
 		if not args:
@@ -498,7 +528,9 @@ if __name__ == '__main__':
 				try:
 					app = Application(f)
 					app.execute(verbose=options.verbose)
-				except ValueError, e:
+				except ApplicationExecException, e:
 					exit_value = 1
 					print >> sys.stderr, "Execution faild: %s" % e
+
+	# exit program
 	sys.exit(exit_value)
