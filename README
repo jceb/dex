@@ -1,7 +1,8 @@
 Usage: dex [Options] [DesktopEntryFile] ..
 
 dex, DesktopEntry Execution, is a program to execute DesktopEntry files of
-type Application
+type Application. It's main purpose is to provide a regular autostart for
+window managers not implementing the Freedesktop autostart specification.
 
 Options:
   -h, --help       show this help message and exit
