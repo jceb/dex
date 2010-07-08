@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Author:		Jan Christoph Ebersbach <jceb@e-jc.de>
-# Last Modified: Sat 12. Jun 2010 19:32:29 +0200 CEST
+# Last Modified: Thu 08. Jul 2010 20:03:06 +0200 CEST
 
 # dex
 # DesktopEntry Execution, is a program to execute DesktopEntry files of type Application
@@ -38,6 +38,8 @@ import glob
 import os
 import subprocess
 import sys
+
+__version__ = "0.1"
 
 # DesktopEntry exceptions
 class DesktopEntryTypeException(Exception):
@@ -490,6 +492,7 @@ if __name__ == '__main__':
 	parser.add_option("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
 	parser.add_option("-t", "--test", action="store_true", dest="test", help="run the tests")
 	parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="verbose output")
+	parser.add_option("-V", "--version", action="store_true", dest="version", help="display version information")
 	parser.set_defaults(dryrun=False, test=False, autostart=False, verbose=False)
 	parser.set_usage('%prog [Options] [DesktopEntryFile] ..')
 	parser.set_description('dex, DesktopEntry Execution, is a program to execute DesktopEntry files of type Application')
@@ -498,8 +501,12 @@ if __name__ == '__main__':
 
 	exit_value = 0
 
+	# display version information
+	if options.version:
+		print "dex %s" % __version__
+
 	# run tests
-	if options.test:
+	elif options.test:
 		_test()
 
 	# perform autostart
