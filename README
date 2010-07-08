@@ -1,0 +1,11 @@
+Usage: dex [Options] [DesktopEntryFile] ..
+
+dex, DesktopEntry Execution, is a program to execute DesktopEntry files of
+type Application
+
+Options:
+  -h, --help       show this help message and exit
+  -a, --autostart  autostart programs
+  -d, --dry-run    dry run, don't execute any command
+  -t, --test       run the tests
+  -v, --verbose    verbose output
