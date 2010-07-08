@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Author:		Jan Christoph Ebersbach <jceb@e-jc.de>
-# Last Modified: Sat 12. Jun 2010 18:17:27 +0200 CEST
+# Last Modified: Sat 12. Jun 2010 19:32:29 +0200 CEST
 
 # dex
 # DesktopEntry Execution, is a program to execute DesktopEntry files of type Application
@@ -287,7 +287,7 @@ class Application(DesktopEntry):
 		>>> Application._build_cmd(r'"gvim \\\\\\\\ \\`test\\$"')
 		['gvim \\\\ `test$']
 		>>> Application._build_cmd(r'vim ~/.vimrc', True)
-		['x-terminal-emulator', '-c', 'vim', '~/.vimrc']
+		['x-terminal-emulator', '-e', 'vim', '~/.vimrc']
 		>>> Application._build_cmd('vim ~/.vimrc', False)
 		['vim', '~/.vimrc']
 		>>> Application._build_cmd("vim '~/.vimrc test'", False)
@@ -301,7 +301,7 @@ class Application(DesktopEntry):
 		"""
 		cmd = []
 		if needs_terminal:
-			cmd += ['x-terminal-emulator', '-c']
+			cmd += ['x-terminal-emulator', '-e']
 		_tmp = exec_string.replace('\\\\', '\\')
 		_arg = ''
 		in_esc = False
@@ -507,12 +507,12 @@ if __name__ == '__main__':
 		if options.dryrun and options.verbose:
 			print 'Dry run, nothing is executed.'
 
-		for a in get_autostart_files(verbose=options.verbose):
+		for app in get_autostart_files(verbose=options.verbose):
 			try:
-				a.execute(dryrun=options.dryrun, verbose=options.verbose)
-			except ApplicationExecException, e:
+				app.execute(dryrun=options.dryrun, verbose=options.verbose)
+			except Exception, e:
 				exit_value = 1
-				print >> sys.stderr, "Execution faild: %s" % e
+				print >> sys.stderr, "Execution faild: %s\n%s" % (app.filename, e)
 
 	# execute specified DesktopEntry files
 	else:
@@ -528,9 +528,9 @@ if __name__ == '__main__':
 				try:
 					app = Application(f)
 					app.execute(verbose=options.verbose)
-				except ApplicationExecException, e:
+				except Exception, e:
 					exit_value = 1
-					print >> sys.stderr, "Execution faild: %s" % e
+					print >> sys.stderr, "Execution faild: %s\n%s" % (app.filename, e)
 
 	# exit program
 	sys.exit(exit_value)
