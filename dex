@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Author:		Jan Christoph Ebersbach <jceb@e-jc.de>
-# Last Modified: Thu 08. Jul 2010 20:03:06 +0200 CEST
+# Last Modified: Sat 13. Nov 2010 13:42:26 +0100 CET
 
 # dex
 # DesktopEntry Execution, is a program to execute DesktopEntry files of type Application
@@ -52,6 +52,7 @@ class DesktopEntryTypeException(Exception):
 class ApplicationExecException(Exception):
 	def __init__(self, value):
 		self.value = value
+		Exception.__init__(self, value)
 
 	def __str__(self):
 		return repr(self.value)
@@ -88,10 +89,10 @@ class DesktopEntry(object):
 		self.groups = {} # clear settings
 		self.entries = None # clear settings
 
-		f = open(self.filename, 'r')
+		_f = open(self.filename, 'r')
 		current_group = None
 		try:
-			for l in f.readlines():
+			for l in _f.readlines():
 				l = l.strip('\n')
 				# handle comments and empty lines
 				if l.startswith('#') or l.strip() == '':
@@ -121,11 +122,11 @@ class DesktopEntry(object):
 				# TODO: parse k for locale specific settings
 				# TODO: parse v for multivalue fields
 				self.groups[current_group][k] = v
-		except Exception, e:
-			f.close()
-			raise e
+		except Exception, ex:
+			_f.close()
+			raise ex
 		finally:
-			f.close()
+			_f.close()
 
 		if not self.entries:
 			raise ValueError("'%s' is not a valid Desktop Entry group is missing." % (self.filename, ))
@@ -411,10 +412,10 @@ class AutostartFile(Application):
 def which(filename):
 	path = os.environ.get('PATH', None)
 	if path:
-		for p in path.split(os.pathsep):
-			f = os.path.join(p, filename)
-			if os.path.isfile(f):
-				return f
+		for _p in path.split(os.pathsep):
+			_f = os.path.join(_p, filename)
+			if os.path.isfile(_f):
+				return _f
 
 def get_autostart_directories():
 	"""
@@ -448,16 +449,16 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 	hidden_autostart_files = []
 
 	for d in get_autostart_directories():
-		for f in glob.glob1(d, '*.desktop'):
-			_f = os.path.join(d, f)
+		for _f in glob.glob1(d, '*.desktop'):
+			_f = os.path.join(d, _f)
 			if not os.path.isfile(_f):
 				continue
 			af = None
 			try:
 				af = AutostartFile(_f)
-			except DesktopEntryTypeException, e:
+			except DesktopEntryTypeException, ex:
 				if verbose:
-					print >> sys.stderr, e
+					print >> sys.stderr, ex
 				continue
 
 			if af in autostart_files or af in hidden_autostart_files:
