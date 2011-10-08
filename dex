@@ -538,7 +538,9 @@ if __name__ == '__main__':
 			for f in args:
 				try:
 					app = Application(f)
-					app.execute(verbose=options.verbose)
+					app.execute(dryrun=options.dryrun, verbose=options.verbose)
+				except ValueError, e:
+					print >> sys.stderr, e
 				except Exception, e:
 					exit_value = 1
 					print >> sys.stderr, "Execution faild: %s\n%s" % (app.filename, e)
