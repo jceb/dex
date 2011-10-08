@@ -460,6 +460,9 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 				if verbose:
 					print >> sys.stderr, ex
 				continue
+			except ValueError, ex:
+				print >> sys.stderr, ex
+				continue
 
 			if af in autostart_files or af in hidden_autostart_files:
 				if verbose:
