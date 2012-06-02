@@ -370,13 +370,18 @@ class Application(DesktopEntry):
 			_exec = False
 
 		if _exec:
+			path = self.Path
 			cmd = self._build_cmd(self.Exec)
 			if not cmd:
 				raise ApplicationExecException('Failed to build command string.')
 			if dryrun or verbose:
+				if path:
+					print 'Changing directory to: ' + path
 				print 'Executing command: ' + ' '.join(cmd)
 			if dryrun:
 				return None
+			if path:
+				return subprocess.Popen(cmd, cwd=path)
 			return subprocess.Popen(cmd)
 
 class AutostartFile(Application):
