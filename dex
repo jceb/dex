@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 # Author:		Jan Christoph Ebersbach <jceb@e-jc.de>
-# Last Modified: Sat 13. Nov 2010 13:42:26 +0100 CET
+# Last Modified: Thu 12. Jul 2012 20:16:13 +0200 CEST
 
 # dex
 # DesktopEntry Execution, is a program to execute DesktopEntry files of the
@@ -10,7 +10,7 @@
 #
 # Depends: None
 #
-# Copyright (C) 2010 Jan Christoph Ebersbach
+# Copyright (C) 2010,2011,2012 Jan Christoph Ebersbach
 #
 # http://www.e-jc.de/
 #
