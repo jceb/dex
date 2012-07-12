@@ -42,6 +42,7 @@ import sys
 
 __version__ = "0.2"
 
+
 # DesktopEntry exceptions
 class DesktopEntryTypeException(Exception):
 	def __init__(self, value):
@@ -49,6 +50,7 @@ class DesktopEntryTypeException(Exception):
 
 	def __str__(self):
 		return repr(self.value)
+
 
 class ApplicationExecException(Exception):
 	def __init__(self, value):
@@ -58,10 +60,12 @@ class ApplicationExecException(Exception):
 	def __str__(self):
 		return repr(self.value)
 
+
 # DesktopEntry class definitions
 class DesktopEntry(object):
 	"""
-	Implements some parts of Desktop Entry specification: http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-1.1.html
+	Implements some parts of Desktop Entry specification:
+	http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-1.1.html
 	"""
 	def __init__(self, filename):
 		"""
@@ -71,7 +75,7 @@ class DesktopEntry(object):
 			raise ValueError('File does not exist: %s' % filename)
 		self._filename = filename
 		self.groups = None
-		self.entries = None # Link to default group "Desktop Entry"
+		self.entries = None  # Link to default group "Desktop Entry"
 
 	def __str__(self):
 		if self.Name:
@@ -87,8 +91,8 @@ class DesktopEntry(object):
 
 	def load(self):
 		"""Load or reload contents of desktop entry file"""
-		self.groups = {} # clear settings
-		self.entries = None # clear settings
+		self.groups = {}     # clear settings
+		self.entries = None  # clear settings
 
 		_f = open(self.filename, 'r')
 		current_group = None
@@ -260,6 +264,7 @@ class DesktopEntry(object):
 	def URL(self):
 		return self.get_string('URL')
 
+
 class Application(DesktopEntry):
 	"""
 	Implements application files
@@ -365,9 +370,7 @@ class Application(DesktopEntry):
 		"""
 		_exec = True
 		_try = self.TryExec
-		if _try \
-			and not (os.path.isabs(_try) and os.path.isfile(_try)) \
-			and not which(_try):
+		if _try and not (os.path.isabs(_try) and os.path.isfile(_try)) and not which(_try):
 			_exec = False
 
 		if _exec:
