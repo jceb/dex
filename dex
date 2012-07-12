@@ -75,7 +75,7 @@ class DesktopEntry(object):
 			raise ValueError('File does not exist: %s' % filename)
 		self._filename = filename
 		self.groups = None
-		self.entries = None  # Link to default group "Desktop Entry"
+		self.entries = None  # Link to the default group "Desktop Entry"
 
 	def __str__(self):
 		if self.Name:
