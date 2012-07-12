@@ -40,7 +40,7 @@ import os
 import subprocess
 import sys
 
-__version__ = "0.2"
+__version__ = "0.3"
 
 
 # DesktopEntry exceptions
@@ -67,20 +67,24 @@ class DesktopEntry(object):
 	Implements some parts of Desktop Entry specification:
 	http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-1.1.html
 	"""
-	def __init__(self, filename):
+	def __init__(self, filename=None):
 		"""
 		@param	filename	Desktop Entry File
 		"""
-		if not os.path.isfile(filename):
+		if filename is not None and not os.path.isfile(filename):
 			raise ValueError('File does not exist: %s' % filename)
 		self._filename = filename
-		self.groups = None
-		self.entries = None  # Link to the default group "Desktop Entry"
+		self.groups = {}
 
 	def __str__(self):
 		if self.Name:
 			return self.Name
-		return self.filename
+		elif self.filename:
+			return self.filename
+		return repr(self)
+
+	def __lt__(self, y):
+		return self.filename < y.filename
 
 	@property
 	def filename(self):
@@ -89,10 +93,45 @@ class DesktopEntry(object):
 		"""
 		return self._filename
 
+	@classmethod
+	def fromfile(cls, filename):
+		"""Create DesktopEntry for file
+
+		@params	filename	Create a DesktopEntry object for file and determine
+							the type automatically
+		"""
+
+		de = cls()
+
+		# determine filetype
+		de_type = 'Link'
+		if os.path.exists(target):
+			if os.path.isdir(target):
+				de_type = 'Directory'
+				# TODO fix the value for directories
+				de.set_value('??', target)
+			else:
+				de_type = 'Application'
+				de.set_value('Exec', target)
+				de.set_value('Name', os.path.basename(target))
+				if os.name == 'posix':
+					whatis = subprocess.Popen(['whatis', target], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+					stdout, stderr = whatis.communicate()
+					res = stdout.decode(sys.stdin.encoding).split('- ', 1)
+					if len(res) == 2:
+						de.set_value('Comment', res[1].split(os.linesep, 1)[0])
+		else:
+			# type Link
+			de.set_value('URL', target)
+
+		de.set_value('Type', de_type)
+
+		return de
+
 	def load(self):
 		"""Load or reload contents of desktop entry file"""
 		self.groups = {}     # clear settings
-		self.entries = None  # clear settings
+		grp_desktopentry = 'Desktop Entry'
 
 		_f = open(self.filename, 'r')
 		current_group = None
@@ -111,9 +150,6 @@ class DesktopEntry(object):
 					if self.groups.get(group, None):
 						raise ValueError("'%s' is not a valid Desktop Entry because group '%s' is specified multiple times." % (self.filename, group))
 					current_group = group
-					self.groups[group] = {}
-					if group == 'Desktop Entry':
-						self.entries = self.groups[group]
 					continue
 
 				# handle all the other lines
@@ -126,31 +162,55 @@ class DesktopEntry(object):
 				v = kv[1]
 				# TODO: parse k for locale specific settings
 				# TODO: parse v for multivalue fields
-				self.groups[current_group][k] = v
+				self.set_value(k, v, current_group)
 		except Exception as ex:
 			_f.close()
 			raise ex
 		finally:
 			_f.close()
 
-		if not self.entries:
+		if grp_desktopentry not in self.groups:
 			raise ValueError("'%s' is not a valid Desktop Entry group is missing." % (self.filename, ))
-		if not (self.entries.get('Type', None) and self.entries.get('Name', None)):
+		if not (self.Type and self.Name):
 			raise ValueError("'%s' is not a valid Desktop Entry because Type or Name keys are missing." % (self.filename, ))
-		_type = self.entries.get('Type', None)
+		_type = self.Type
 		if  _type == 'Application':
-			if not self.entries.get('Exec', None):
+			if not self.Exec:
 				raise ValueError("'%s' is not a valid Desktop Entry of type '%s' because Exec is missing." % (self.filename, _type))
 		elif  _type == 'Link':
-			if not self.entries.get('URL', None):
+			if not self.URL:
 				raise ValueError("'%s' is not a valid Desktop Entry of type '%s' because URL is missing." % (self.filename, _type))
 		elif  _type == 'Directory':
 			pass
 		else:
-			raise ValueError("'%s' is not a valid Desktop Entry because Type '%s' is unkown." % (self.filename, self.entries.get('Type', None)))
+			raise ValueError("'%s' is not a valid Desktop Entry because Type '%s' is unkown." % (self.filename, self.Type))
 
 	# another name for load
 	reload = load
+
+	def write(self, fileobject):
+		"""Write DesktopEntry to a file
+
+		@param	fileobject	DesktopEntry is written to file
+
+		>>> DesktopEntry('/bin/sh').write(sys.stdout)
+		"""
+		for group in self.groups:
+			fileobject.write('[%s]\n' % (group, ))
+			for key in self.groups[group]:
+				fileobject.write('%s=%s\n' % (key, self.groups[group][key]))
+
+	def set_value(self, key, value, group='Desktop Entry'):
+		""" Set a key, value pair in group
+
+		@param	key	Key
+		@param	value	Value
+		@param	group	The group key and value are set in. Default: Desktop Entry
+		"""
+		if group not in self.groups:
+			self.groups[group] = {}
+		self.groups[group][key] = str(value)
+		return value
 
 	def _get_value(self, key, group='Desktop Entry', default=None):
 		if not self.groups:
@@ -493,7 +553,7 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 				hidden_autostart_files.append(af)
 				continue
 			autostart_files.append(af)
-	return autostart_files
+	return sorted(autostart_files)
 
 def _test():
 	import doctest
@@ -505,6 +565,7 @@ if __name__ == '__main__':
 	parser = ArgumentParser(usage='%(prog)s [options] [DesktopEntryFile [DesktopEntryFile ...]]',
 			description='dex, DesktopEntry Execution, is a program to generate and execute DesktopEntry files of the type Application',
 			epilog='Example usage: list autostart programs: dex -ad')
+	parser.add_argument("-c", "--create", nargs='+', dest="create", help="create a DesktopEntry file for the given program. If a second argument is provided it's taken as output filename or written to stdout (filname: -). By default a new file with the postfix .desktop is created")
 	parser.add_argument("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
 	parser.add_argument("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
 	parser.add_argument("-t", "--test", action="store_true", dest="test", help="perform a self-test")
@@ -536,6 +597,27 @@ if __name__ == '__main__':
 			except Exception as e:
 				exit_value = 1
 				print("Execution faild: %s%s%s" % (app.filename, os.linesep, e), file=sys.stderr)
+
+	# create a new DesktopEntry file from the given argument
+	elif args.create:
+		target = args.create[0]
+		if args.verbose:
+			print('Creating DesktopEntry for file %s.' % target)
+
+		de = DesktopEntry.fromfile(target)
+		if args.verbose:
+			print('Type: %s' % de.Type)
+
+		# determine output file
+		output = '.'.join((os.path.basename(target), 'directory' if
+			de.Type == 'Directory' else 'desktop'))
+		if len(args.create) > 1:
+			output = args.create[1]
+
+		if args.verbose:
+			print('Output: %s' % output)
+		targetfile = sys.stdout if output == '-' else open(output, 'w')
+		de.write(targetfile)
 
 	# execute specified DesktopEntry files
 	else:
