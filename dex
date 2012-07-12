@@ -535,7 +535,7 @@ if __name__ == '__main__':
 				app.execute(dryrun=args.dryrun, verbose=args.verbose)
 			except Exception as e:
 				exit_value = 1
-				print("Execution faild: %s\n%s" % (app.filename, e), file=sys.stderr)
+				print("Execution faild: %s%s%s" % (app.filename, os.linesep, e), file=sys.stderr)
 
 	# execute specified DesktopEntry files
 	else:
@@ -555,7 +555,7 @@ if __name__ == '__main__':
 					print(e, file=sys.stderr)
 				except Exception as e:
 					exit_value = 1
-					print("Execution faild: %s\n%s" % (app.filename, e), file=sys.stderr)
+					print("Execution faild: %s%s%s" % (app.filename, os.linesep, e), file=sys.stderr)
 
 	# exit program
 	sys.exit(exit_value)
