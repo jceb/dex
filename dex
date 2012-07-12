@@ -503,11 +503,11 @@ def _test():
 if __name__ == '__main__':
 	from argparse import ArgumentParser
 	parser = ArgumentParser(usage='%(prog)s [options] [DesktopEntryFile [DesktopEntryFile ...]]',
-			description='dex, DesktopEntry Execution, is a program to execute DesktopEntry files of the type Application',
+			description='dex, DesktopEntry Execution, is a program to generate and execute DesktopEntry files of the type Application',
 			epilog='Example usage: list autostart programs: dex -ad')
 	parser.add_argument("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
 	parser.add_argument("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
-	parser.add_argument("-t", "--test", action="store_true", dest="test", help="run the tests")
+	parser.add_argument("-t", "--test", action="store_true", dest="test", help="perform a self-test")
 	parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="verbose output")
 	parser.add_argument("-V", "--version", action="store_true", dest="version", help="display version information")
 	parser.add_argument('files', nargs='*', help="DesktopEntry files")
