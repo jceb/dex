@@ -5,7 +5,8 @@
 # Last Modified: Sat 13. Nov 2010 13:42:26 +0100 CET
 
 # dex
-# DesktopEntry Execution, is a program to execute DesktopEntry files of type Application
+# DesktopEntry Execution, is a program to execute DesktopEntry files of the
+# type Application
 #
 # Depends: None
 #
@@ -122,7 +123,7 @@ class DesktopEntry(object):
 				# TODO: parse k for locale specific settings
 				# TODO: parse v for multivalue fields
 				self.groups[current_group][k] = v
-		except Exception, ex:
+		except Exception as ex:
 			_f.close()
 			raise ex
 		finally:
@@ -150,10 +151,10 @@ class DesktopEntry(object):
 	def _get_value(self, key, group='Desktop Entry', default=None):
 		if not self.groups:
 			self.load()
-		if not self.groups.has_key(group):
+		if group not in self.groups:
 			raise KeyError("Group '%s' not found." % group)
 		grp = self.groups[group]
-		if not grp.has_key(key):
+		if key not in grp:
 			return default
 		return grp[key]
 
@@ -376,8 +377,8 @@ class Application(DesktopEntry):
 				raise ApplicationExecException('Failed to build command string.')
 			if dryrun or verbose:
 				if path:
-					print 'Changing directory to: ' + path
-				print 'Executing command: ' + ' '.join(cmd)
+					print('Changing directory to: ' + path)
+				print('Executing command: ' + ' '.join(cmd))
 			if dryrun:
 				return None
 			if path:
@@ -461,30 +462,30 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 			af = None
 			try:
 				af = AutostartFile(_f)
-			except DesktopEntryTypeException, ex:
+			except DesktopEntryTypeException as ex:
 				if verbose:
-					print >> sys.stderr, ex
+					print(ex, file=sys.stderr)
 				continue
-			except ValueError, ex:
-				print >> sys.stderr, ex
+			except ValueError as ex:
+				print(ex, file=sys.stderr)
 				continue
 
 			if af in autostart_files or af in hidden_autostart_files:
 				if verbose:
-					print 'Ignoring file, overridden by other autostart file: %s' % af.filename
+					print('Ignoring file, overridden by other autostart file: %s' % af.filename)
 				continue
 			if af.Hidden:
 				if verbose:
-					print 'Ignoring file, hidden attribute is set: %s' % af.filename
+					print('Ignoring file, hidden attribute is set: %s' % af.filename)
 				hidden_autostart_files.append(af)
 				continue
 			if parse_gnome_autostart and not af.get_boolean('X-GNOME-Autostart-enabled', default=True):
 				if verbose:
-					print 'Ignoring file, gnome autostart disabled: %s' % af.filename
+					print('Ignoring file, gnome autostart disabled: %s' % af.filename)
 				hidden_autostart_files.append(af)
 				continue
 			if verbose:
-				print 'Autostart file: %s' % af.filename
+				print('Autostart file: %s' % af.filename)
 			autostart_files.append(af)
 	return autostart_files
 
@@ -494,61 +495,60 @@ def _test():
 
 # start execution
 if __name__ == '__main__':
-	from optparse import OptionParser
-
-	parser = OptionParser()
-	parser.add_option("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
-	parser.add_option("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
-	parser.add_option("-t", "--test", action="store_true", dest="test", help="run the tests")
-	parser.add_option("-v", "--verbose", action="store_true", dest="verbose", help="verbose output")
-	parser.add_option("-V", "--version", action="store_true", dest="version", help="display version information")
+	from argparse import ArgumentParser
+	parser = ArgumentParser(usage='%(prog)s [options] [DesktopEntryFile [DesktopEntryFile ...]]',
+			description='dex, DesktopEntry Execution, is a program to execute DesktopEntry files of the type Application')
+	parser.add_argument("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
+	parser.add_argument("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
+	parser.add_argument("-t", "--test", action="store_true", dest="test", help="run the tests")
+	parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="verbose output")
+	parser.add_argument("-V", "--version", action="store_true", dest="version", help="display version information")
+	parser.add_argument('files', nargs='*', help="DesktopEntry files")
 	parser.set_defaults(dryrun=False, test=False, autostart=False, verbose=False)
-	parser.set_usage('%prog [Options] [DesktopEntryFile] ..')
-	parser.set_description('dex, DesktopEntry Execution, is a program to execute DesktopEntry files of type Application')
 
-	(options, args) = parser.parse_args()
+	args = parser.parse_args()
 
 	exit_value = 0
 
 	# display version information
-	if options.version:
-		print "dex %s" % __version__
+	if args.version:
+		print("dex %s" % __version__)
 
 	# run tests
-	elif options.test:
+	elif args.test:
 		_test()
 
 	# perform autostart
-	elif options.autostart:
-		if options.dryrun and options.verbose:
-			print 'Dry run, nothing is executed.'
+	elif args.autostart:
+		if args.dryrun and args.verbose:
+			print('Dry run, nothing is executed.')
 
-		for app in get_autostart_files(verbose=options.verbose):
+		for app in get_autostart_files(verbose=args.verbose):
 			try:
-				app.execute(dryrun=options.dryrun, verbose=options.verbose)
-			except Exception, e:
+				app.execute(dryrun=args.dryrun, verbose=args.verbose)
+			except Exception as e:
 				exit_value = 1
-				print >> sys.stderr, "Execution faild: %s\n%s" % (app.filename, e)
+				print("Execution faild: %s\n%s" % (app.filename, e), file=sys.stderr)
 
 	# execute specified DesktopEntry files
 	else:
-		if options.dryrun and options.verbose:
-			print 'Dry run, nothing is executed.'
+		if args.dryrun and args.verbose:
+			print('Dry run, nothing is executed.')
 
-		if not args:
-			print >> sys.stderr, "Nothing to execute, no DesktopEntry files specified!"
+		if not args.files:
+			print("Nothing to execute, no DesktopEntry files specified!", file=sys.stderr)
 			parser.print_help()
 			exit_value = 1
 		else:
-			for f in args:
+			for f in args.files:
 				try:
 					app = Application(f)
-					app.execute(dryrun=options.dryrun, verbose=options.verbose)
-				except ValueError, e:
-					print >> sys.stderr, e
-				except Exception, e:
+					app.execute(dryrun=args.dryrun, verbose=args.verbose)
+				except ValueError as e:
+					print(e, file=sys.stderr)
+				except Exception as e:
 					exit_value = 1
-					print >> sys.stderr, "Execution faild: %s\n%s" % (app.filename, e)
+					print("Execution faild: %s\n%s" % (app.filename, e), file=sys.stderr)
 
 	# exit program
 	sys.exit(exit_value)
