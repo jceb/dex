@@ -379,6 +379,8 @@ class Application(DesktopEntry):
 			if not cmd:
 				raise ApplicationExecException('Failed to build command string.')
 			if dryrun or verbose:
+				if verbose:
+					print('Autostart file: %s' % self.filename)
 				if path:
 					print('Changing directory to: ' + path)
 				print('Executing command: ' + ' '.join(cmd))
@@ -467,9 +469,12 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 				af = AutostartFile(_f)
 			except DesktopEntryTypeException as ex:
 				if verbose:
+					print('Autostart file: %s' % af.filename)
 					print(ex, file=sys.stderr)
 				continue
 			except ValueError as ex:
+				if verbose:
+					print('Autostart file: %s' % af.filename)
 				print(ex, file=sys.stderr)
 				continue
 
@@ -487,8 +492,6 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 					print('Ignoring file, gnome autostart disabled: %s' % af.filename)
 				hidden_autostart_files.append(af)
 				continue
-			if verbose:
-				print('Autostart file: %s' % af.filename)
 			autostart_files.append(af)
 	return autostart_files
 
