@@ -1,22 +1,30 @@
-Usage: dex [Options] [DesktopEntryFile] ..
+usage: dex [options] [DesktopEntryFile [DesktopEntryFile ...]]
 
-dex, DesktopEntry Execution, is a program to execute DesktopEntry files of
-type Application. It's main purpose is to provide a regular autostart for
-window managers not implementing the Freedesktop autostart specification.
+dex, DesktopEntry Execution, is a program to generate and execute DesktopEntry
+files of the type Application
 
-Options:
-  -h, --help       show this help message and exit
-  -a, --autostart  autostart programs
-  -d, --dry-run    dry run, don't execute any command
-  -t, --test       run the tests
-  -v, --verbose    verbose output
+positional arguments:
+  files                 DesktopEntry files
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -c CREATE [CREATE ...], --create CREATE [CREATE ...]
+                        create a DesktopEntry file for the given program. If a
+                        second argument is provided it's taken as output
+                        filename or written to stdout (filname: -). By default
+                        a new file with the postfix .desktop is created
+  -a, --autostart       autostart programs
+  -d, --dry-run         dry run, don't execute any command
+  -t, --test            perform a self-test
+  -v, --verbose         verbose output
+  -V, --version         display version information
 
 Examples:
 Perform an autostart/execute all programs in the autostart folders.
  dex -a
 
 Preview the programs would be executed in a regular autostart.
- dex -a -d
+ dex -ad
 
 Execute a single program from command line and enable verbose output.
  dex -v skype.desktop
