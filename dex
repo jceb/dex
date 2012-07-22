@@ -287,11 +287,11 @@ class DesktopEntry(object):
 
 	@property
 	def OnlyShowIn(self):
-		return self.get_strings('OnlyShowIn')
+		return self.get_list('OnlyShowIn')
 
 	@property
 	def NotShowIn(self):
-		return self.get_strings('NotShowIn')
+		return self.get_list('NotShowIn')
 
 	@property
 	def TryExec(self):
@@ -483,14 +483,6 @@ class AutostartFile(Application):
 		The basename of file
 		"""
 		return self._basename
-
-	@property
-	def OnlyShowIn(self):
-		return self.get_list('OnlyShowIn')
-
-	@property
-	def NotShowIn(self):
-		return self.get_list('NotShowIn')
 
 # local methods
 def which(filename):
