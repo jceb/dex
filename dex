@@ -230,6 +230,13 @@ class DesktopEntry(object):
 			return False
 		raise ValueError("'%s's value '%s' in group '%s' is not a boolean value." % (key, val, group))
 
+	def get_list(self, key, group='Desktop Entry', default=''):
+		list_of_strings = []
+		res = self.get_string(key, group=group, default=default)
+		if type(res) == str:
+			list_of_strings = res.split(';')
+		return list_of_strings
+
 	def get_string(self, key, group='Desktop Entry', default=''):
 		return self._get_value(key, group=group, default=default)
 
@@ -476,6 +483,14 @@ class AutostartFile(Application):
 		The basename of file
 		"""
 		return self._basename
+
+	@property
+	def OnlyShowIn(self):
+		return self.get_list('OnlyShowIn')
+
+	@property
+	def NotShowIn(self):
+		return self.get_list('NotShowIn')
 
 # local methods
 def which(filename):
