@@ -192,8 +192,6 @@ class DesktopEntry(object):
 		"""Write DesktopEntry to a file
 
 		@param	fileobject	DesktopEntry is written to file
-
-		>>> DesktopEntry('/bin/sh').write(sys.stdout)
 		"""
 		for group in self.groups:
 			fileobject.write('[%s]\n' % (group, ))
