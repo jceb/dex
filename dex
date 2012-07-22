@@ -549,8 +549,9 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 				continue
 			except ValueError as ex:
 				if verbose:
-					print('Autostart file: %s' % af.filename)
-				print(ex, file=sys.stderr)
+					print('Autostart file: %s' % _f)
+				import traceback
+				traceback.print_exc()
 				continue
 
 			if af in autostart_files or af in non_autostart_files:
