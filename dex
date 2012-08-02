@@ -524,7 +524,7 @@ def get_autostart_directories():
 	"""
 	Generate the list of autostart directories
 	"""
-	autostart_directories = [] # autostart directories, ordered by preference
+	autostart_directories = []  # autostart directories, ordered by preference
 
 	# generate list of autostart directories
 	if os.environ.get('XDG_CONFIG_HOME', None):
@@ -574,22 +574,22 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 
 			if af in autostart_files or af in non_autostart_files:
 				if verbose:
-					print('Ignoring file, overridden by other autostart file: %s' % af.filename)
+					print('Ignoring file, overridden by other autostart file: %s' % af.filename, file=sys.stderr)
 				continue
 			elif af.Hidden:
 				if verbose:
-					print('Ignoring file, hidden attribute is set: %s' % af.filename)
+					print('Ignoring file, hidden attribute is set: %s' % af.filename, file=sys.stderr)
 				non_autostart_files.append(af)
 				continue
 			elif environment:
 				if environment in [x.lower() for x in af.NotShowIn]:
 					if verbose:
-						print('Ignoring file, it must not start in specific environments (%s): %s' % (', '.join(af.NotShowIn), af.filename))
+						print('Ignoring file, it must not start in specific environments (%s): %s' % (', '.join(af.NotShowIn), af.filename), file=sys.stderr)
 					non_autostart_files.append(af)
 					continue
 				elif af.OnlyShowIn and environment not in [x.lower() for x in af.OnlyShowIn]:
 					if verbose:
-						print('Ignoring file, it must only start in specific environments (%s): %s' % (', '.join(af.OnlyShowIn), af.filename))
+						print('Ignoring file, it must only start in specific environments (%s): %s' % (', '.join(af.OnlyShowIn), af.filename), file=sys.stderr)
 					non_autostart_files.append(af)
 					continue
 			autostart_files.append(af)
@@ -635,14 +635,14 @@ if __name__ == '__main__':
 	# perform autostart
 	elif args.autostart:
 		if args.dryrun and args.verbose:
-			print('Dry run, nothing is executed.')
+			print('Dry run, nothing is executed.', file=sys.stderr)
 
 		for app in get_autostart_files(verbose=args.verbose):
 			try:
 				app.execute(dryrun=args.dryrun, verbose=args.verbose)
-			except Exception as e:
+			except Exception as ex:
 				exit_value = 1
-				print("Execution faild: %s%s%s" % (app.filename, os.linesep, e), file=sys.stderr)
+				print("Execution faild: %s%s%s" % (app.filename, os.linesep, ex), file=sys.stderr)
 
 	# create a new DesktopEntry file from the given argument
 	elif args.create:
@@ -668,7 +668,7 @@ if __name__ == '__main__':
 	# execute specified DesktopEntry files
 	else:
 		if args.dryrun and args.verbose:
-			print('Dry run, nothing is executed.')
+			print('Dry run, nothing is executed.', file=sys.stderr)
 
 		if not args.files:
 			print("Nothing to execute, no DesktopEntry files specified!", file=sys.stderr)
@@ -679,11 +679,11 @@ if __name__ == '__main__':
 				try:
 					app = Application(f)
 					app.execute(dryrun=args.dryrun, verbose=args.verbose)
-				except ValueError as e:
-					print(e, file=sys.stderr)
-				except Exception as e:
+				except ValueError as ex:
+					print(ex, file=sys.stderr)
+				except Exception as ex:
 					exit_value = 1
-					print("Execution faild: %s%s%s" % (app.filename, os.linesep, e), file=sys.stderr)
+					print("Execution faild: %s%s%s" % (app.filename, os.linesep, ex), file=sys.stderr)
 
 	# exit program
 	sys.exit(exit_value)
