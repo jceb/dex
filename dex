@@ -145,19 +145,19 @@ class DesktopEntry(object):
 				# handle groups
 				if l.startswith('['):
 					if not l.endswith(']'):
-						raise ValueError("'%s' is not a valid Desktop Entry because of line '%s'." % (self.filename, l))
+						raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because of line '%s'." % (self.filename, l))
 					group = l[1:-1]
 					if self.groups.get(group, None):
-						raise ValueError("'%s' is not a valid Desktop Entry because group '%s' is specified multiple times." % (self.filename, group))
+						raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because group '%s' is specified multiple times." % (self.filename, group))
 					current_group = group
 					continue
 
 				# handle all the other lines
 				if not current_group:
-					raise ValueError("'%s' is not a valid Desktop Entry because line '%s' does not belong to a group." % (self.filename, l))
+					raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because line '%s' does not belong to a group." % (self.filename, l))
 				kv = l.split('=', 1)
 				if len(kv) != 2 or kv[0] == '':
-					raise ValueError("'%s' is not a valid Desktop Entry because line '%s' is not a valid key=value pair." % (self.filename, l))
+					raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because line '%s' is not a valid key=value pair." % (self.filename, l))
 				k = kv[0]
 				v = kv[1]
 				# TODO: parse k for locale specific settings
@@ -170,20 +170,20 @@ class DesktopEntry(object):
 			_f.close()
 
 		if grp_desktopentry not in self.groups:
-			raise ValueError("'%s' is not a valid Desktop Entry group is missing." % (self.filename, ))
+			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry group is missing." % (self.filename, ))
 		if not (self.Type and self.Name):
-			raise ValueError("'%s' is not a valid Desktop Entry because Type or Name keys are missing." % (self.filename, ))
+			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type or Name keys are missing." % (self.filename, ))
 		_type = self.Type
 		if  _type == 'Application':
 			if not self.Exec:
-				raise ValueError("'%s' is not a valid Desktop Entry of type '%s' because Exec is missing." % (self.filename, _type))
+				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry of type '%s' because Exec is missing." % (self.filename, _type))
 		elif  _type == 'Link':
 			if not self.URL:
-				raise ValueError("'%s' is not a valid Desktop Entry of type '%s' because URL is missing." % (self.filename, _type))
+				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry of type '%s' because URL is missing." % (self.filename, _type))
 		elif  _type == 'Directory':
 			pass
 		else:
-			raise ValueError("'%s' is not a valid Desktop Entry because Type '%s' is unkown." % (self.filename, self.Type))
+			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type '%s' is unkown." % (self.filename, self.Type))
 
 	# another name for load
 	reload = load
@@ -341,7 +341,7 @@ class Application(DesktopEntry):
 		"""
 		super(Application, self).__init__(filename)
 		if self.Type != 'Application':
-			raise ValueError("'%s' is not of type 'Application'." % self.filename)
+			raise DesktopEntryTypeException("'%s' is not of type 'Application'." % self.filename)
 
 	@classmethod
 	def _build_cmd(cls, exec_string, needs_terminal=False):
@@ -541,9 +541,7 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 				continue
 			except ValueError as ex:
 				if verbose:
-					print('Autostart file: %s' % _f)
-				import traceback
-				traceback.print_exc()
+					print(ex, file=sys.stderr)
 				continue
 
 			if af in autostart_files or af in non_autostart_files:
