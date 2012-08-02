@@ -339,9 +339,35 @@ class Application(DesktopEntry):
 		"""
 		@param	filename	Absolute path to a Desktop Entry File
 		"""
+		if not os.path.isabs(filename):
+			raise ValueError('Filename is not an absolute path: %s' % filename)
 		super(Application, self).__init__(filename)
+		self._basename = os.path.basename(filename)
 		if self.Type != 'Application':
 			raise DesktopEntryTypeException("'%s' is not of type 'Application'." % self.filename)
+
+	def __cmp__(self, y):
+		"""
+		@param	y	The object to compare the current object with - comparison is made on the property of basename
+		"""
+		if isinstance(y, Application):
+			return cmp(y.basename, self.basename)
+		return -1
+
+	def __eq__(self, y):
+		"""
+		@param	y	The object to compare the current object with - comparison is made on the property of basename
+		"""
+		if isinstance(y, Application):
+			return y.basename == self.basename
+		return False
+
+	@property
+	def basename(self):
+		"""
+		The basename of file
+		"""
+		return self._basename
 
 	@classmethod
 	def _build_cmd(cls, exec_string, needs_terminal=False):
@@ -465,25 +491,24 @@ class AutostartFile(Application):
 		"""
 		@param	filename	Absolute path to a Desktop Entry File
 		"""
-		if not os.path.isabs(filename):
-			raise ValueError('Filename is not an absolute path: %s' % filename)
 		super(AutostartFile, self).__init__(filename)
-		self._basename = os.path.basename(filename)
 
-	def __cmp__(self, y):
-		"""
-		@param	y	The object to compare the current object with - comparison is made on the property of basename
-		"""
-		if type(y) == type(self):
-			return cmp(y.basename, self.basename)
-		return -1
 
-	@property
-	def basename(self):
+class EmptyAutostartFile(Application):
+	"""
+	Workaround for empty autostart files that don't contain the necessary data
+	"""
+
+	def __init__(self, filename):
 		"""
-		The basename of file
+		@param	filename	Absolute path to a Desktop Entry File
 		"""
-		return self._basename
+		try:
+			super(EmptyAutostartFile, self).__init__(filename)
+		except DesktopEntryTypeException:
+			# ignore the missing type information
+			pass
+
 
 # local methods
 def which(filename):
@@ -538,9 +563,9 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 			try:
 				af = AutostartFile(_f)
 			except DesktopEntryTypeException as ex:
-				if verbose:
-					print('Autostart file: %s' % af.filename)
-					print(ex, file=sys.stderr)
+				af = EmptyAutostartFile(_f)
+				if af not in autostart_files and not af in non_autostart_files:
+					non_autostart_files.append(af)
 				continue
 			except ValueError as ex:
 				if verbose:
@@ -568,6 +593,9 @@ def get_autostart_files(parse_gnome_autostart=True, verbose=False):
 					non_autostart_files.append(af)
 					continue
 			autostart_files.append(af)
+	if verbose:
+		for i in non_autostart_files:
+			print('Ignoring file: %s' % i.filename, file=sys.stderr)
 	return sorted(autostart_files)
 
 
