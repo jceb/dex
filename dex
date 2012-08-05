@@ -683,7 +683,7 @@ if __name__ == '__main__':
 					print(ex, file=sys.stderr)
 				except Exception as ex:
 					exit_value = 1
-					print("Execution faild: %s%s%s" % (app.filename, os.linesep, ex), file=sys.stderr)
+					print("Execution faild: %s%s%s" % (f, os.linesep, ex), file=sys.stderr)
 
 	# exit program
 	sys.exit(exit_value)
