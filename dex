@@ -372,14 +372,19 @@ class Application(DesktopEntry):
 	@classmethod
 	def _build_cmd(cls, exec_string, needs_terminal=False):
 		"""
+		# test single and multi argument commands
 		>>> Application._build_cmd('gvim')
 		['gvim']
 		>>> Application._build_cmd('gvim test')
 		['gvim', 'test']
+
+		# test quotes
 		>>> Application._build_cmd('"gvim" test')
 		['gvim', 'test']
 		>>> Application._build_cmd('"gvim test"')
 		['gvim test']
+
+		# test escape sequences
 		>>> Application._build_cmd('"gvim test" test2 "test \\\\" 3"')
 		['gvim test', 'test2', 'test " 3']
 		>>> Application._build_cmd(r'"test \\\\\\\\ \\" moin" test')
@@ -398,6 +403,36 @@ class Application(DesktopEntry):
 		['sh', '-c', 'vim ~/.vimrc " test']
 		>>> Application._build_cmd("sh -c 'vim ~/.vimrc \\" test\\"'", False)
 		['sh', '-c', 'vim ~/.vimrc " test"']
+
+		# expand field codes by removing them
+		>>> Application._build_cmd("vim %u", False)
+		['vim']
+		>>> Application._build_cmd("vim ~/.vimrc %u", False)
+		['vim', '~/.vimrc']
+		>>> Application._build_cmd("vim '%u' ~/.vimrc", False)
+		['vim', '%u', '~/.vimrc']
+		>>> Application._build_cmd("vim %u ~/.vimrc", False)
+		['vim', '~/.vimrc']
+		>>> Application._build_cmd("vim /%u/.vimrc", False)
+		['vim', '//.vimrc']
+		>>> Application._build_cmd("vim %u/.vimrc", False)
+		['vim', '/.vimrc']
+		>>> Application._build_cmd("vim %U/.vimrc", False)
+		['vim', '/.vimrc']
+		>>> Application._build_cmd("vim /%U/.vimrc", False)
+		['vim', '//.vimrc']
+		>>> Application._build_cmd("vim %U .vimrc", False)
+		['vim', '.vimrc']
+
+		# preserved escaped field codes
+		>>> Application._build_cmd("vim \\\\%u ~/.vimrc", False)
+		['vim', '%u', '~/.vimrc']
+
+		# test for non-valid field codes, they should be preserved
+		>>> Application._build_cmd("vim %x .vimrc", False)
+		['vim', '%x', '.vimrc']
+		>>> Application._build_cmd("vim %x/.vimrc", False)
+		['vim', '%x/.vimrc']
 		"""
 		cmd = []
 		if needs_terminal:
@@ -407,43 +442,54 @@ class Application(DesktopEntry):
 		in_esc = False
 		in_quote = False
 		in_singlequote = False
+		in_fieldcode = False
 
 		for c in _tmp:
 			if in_esc:
-				_arg += c
 				in_esc = False
-				continue
+			else:
+				if in_fieldcode:
+					in_fieldcode = False
+					if c in ('u', 'U', 'f', 'F'):
+						# TODO ignore field codes for the moment; at some point
+						# field codes should be supported
+						# strip %-char at the end of the argument
+						_arg = _arg[:-1]
+						continue
 
-			if c == '"':
-				if in_quote:
-					in_quote = False
+				if c == '"':
+					if in_quote:
+						in_quote = False
+						cmd.append(_arg)
+						_arg = ''
+						continue
+					if not in_singlequote:
+						in_quote = True
+						continue
+
+				elif c == "'":
+					if in_singlequote:
+						in_singlequote = False
+						cmd.append(_arg)
+						_arg = ''
+						continue
+					if not in_quote:
+						in_singlequote = True
+						continue
+
+				elif c == '\\':
+					in_esc = True
+					continue
+
+				elif c == '%' and not (in_quote or in_singlequote):
+					in_fieldcode = True
+
+				elif c == ' ' and not (in_quote or in_singlequote):
+					if not _arg:
+						continue
 					cmd.append(_arg)
 					_arg = ''
 					continue
-				if not in_singlequote:
-					in_quote = True
-					continue
-
-			if c == "'":
-				if in_singlequote:
-					in_singlequote = False
-					cmd.append(_arg)
-					_arg = ''
-					continue
-				if not in_quote:
-					in_singlequote = True
-					continue
-
-			if c == '\\':
-				in_esc = True
-				continue
-
-			if c == ' ' and not (in_quote or in_singlequote):
-				if not _arg:
-					continue
-				cmd.append(_arg)
-				_arg = ''
-				continue
 
 			_arg += c
 
