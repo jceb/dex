@@ -340,7 +340,7 @@ class Application(DesktopEntry):
 		@param	filename	Absolute path to a Desktop Entry File
 		"""
 		if not os.path.isabs(filename):
-			raise ValueError('Filename is not an absolute path: %s' % filename)
+			filename = os.path.join(os.getcwd(), filename)
 		super(Application, self).__init__(filename)
 		self._basename = os.path.basename(filename)
 		if self.Type != 'Application':
