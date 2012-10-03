@@ -589,7 +589,7 @@ def get_autostart_directories():
 	return autostart_directories
 
 
-def get_autostart_files(parse_gnome_autostart=True, verbose=False):
+def get_autostart_files(verbose=False):
 	"""
 	Generate a list of autostart files according to autostart-spec 0.5
 
