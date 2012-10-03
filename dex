@@ -71,8 +71,12 @@ class DesktopEntry(object):
 		"""
 		@param	filename	Desktop Entry File
 		"""
-		if filename is not None and not os.path.isfile(filename):
-			raise ValueError('File does not exist: %s' % filename)
+		if filename is not None and os.path.islink(filename) and \
+				os.readlink(filename) == os.path.sep + os.path.join('dev', 'null'):
+			# ignore links to /dev/null
+			pass
+		elif filename is None or not os.path.isfile(filename):
+			raise IOError('File does not exist: %s' % filename)
 		self._filename = filename
 		self.groups = {}
 
@@ -605,19 +609,27 @@ def get_autostart_files(verbose=False):
 	for d in get_autostart_directories():
 		for _f in glob.glob1(d, '*.desktop'):
 			_f = os.path.join(d, _f)
-			if not os.path.isfile(_f):
-				continue
 			af = None
-			try:
-				af = AutostartFile(_f)
-			except DesktopEntryTypeException as ex:
-				af = EmptyAutostartFile(_f)
-				if af not in autostart_files and not af in non_autostart_files:
-					non_autostart_files.append(af)
-				continue
-			except ValueError as ex:
+
+			if os.path.isfile(_f) or os.path.islink(_f):
+				try:
+					af = AutostartFile(_f)
+				except DesktopEntryTypeException as ex:
+					af = EmptyAutostartFile(_f)
+					if af not in autostart_files and not af in non_autostart_files:
+						non_autostart_files.append(af)
+					continue
+				except ValueError as ex:
+					if verbose:
+						print(ex, file=sys.stderr)
+					continue
+				except IOError as ex:
+					if verbose:
+						print(ex, file=sys.stderr)
+					continue
+			else:
 				if verbose:
-					print(ex, file=sys.stderr)
+					print('Ignoring unknown file: %s' % _f, file=sys.stderr)
 				continue
 
 			if af in autostart_files or af in non_autostart_files:
@@ -643,7 +655,7 @@ def get_autostart_files(verbose=False):
 			autostart_files.append(af)
 	if verbose:
 		for i in non_autostart_files:
-			print('Ignoring file: %s' % i.filename, file=sys.stderr)
+			print('Ignoring empty file: %s' % i.filename, file=sys.stderr)
 	return sorted(autostart_files)
 
 
@@ -728,6 +740,8 @@ if __name__ == '__main__':
 					app = Application(f)
 					app.execute(dryrun=args.dryrun, verbose=args.verbose)
 				except ValueError as ex:
+					print(ex, file=sys.stderr)
+				except IOError as ex:
 					print(ex, file=sys.stderr)
 				except Exception as ex:
 					exit_value = 1
