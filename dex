@@ -582,9 +582,11 @@ def get_autostart_directories():
 		for d in os.environ['XDG_CONFIG_DIRS'].split(os.pathsep):
 			if not d:
 				continue
-			autostart_directories.append(os.path.join(d, 'autostart'))
+			autostart_dir = os.path.join(d, 'autostart')
+			if autostart_dir not in autostart_directories:
+				autostart_directories.append(autostart_dir)
 	else:
-		autostart_directories.append(os.path.join('/etc/xdg/autostart'))
+		autostart_directories.append(os.path.sep + os.path.join('etc', 'xdg', 'autostart'))
 
 	return autostart_directories
 
