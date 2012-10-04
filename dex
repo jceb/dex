@@ -100,7 +100,7 @@ class DesktopEntry(object):
 							the type automatically
 		"""
 
-		de = cls()
+		de = cls(filename=filename)
 
 		# determine filetype
 		de_type = 'Link'
