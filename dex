@@ -35,7 +35,7 @@ import os
 import subprocess
 import sys
 
-__version__ = "0.6"
+__version__ = "0.7"
 
 
 # DesktopEntry exceptions
@@ -758,7 +758,7 @@ if __name__ == '__main__':
 
 	create = parser.add_argument_group('create')
 	create.add_argument("-c", "--create", nargs='+', dest="create", help="create a DesktopEntry file for the given program. If a second argument is provided it's taken as output filename or written to stdout (filname: -). By default a new file with the postfix .desktop is created")
-	create.add_argument("-t", "--target-directory", nargs=1, dest="targetdir", help="create files in target directory ")
+	create.add_argument("-t", "--target-directory", nargs=1, dest="targetdir", help="create files in target directory")
 
 	parser.set_defaults(func=_run, dryrun=False, test=False, autostart=False, verbose=False)
 
