@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-
+# vi: ft=python:tw=0:sw=4:ts=4:noet
 # Author:		Jan Christoph Ebersbach <jceb@e-jc.de>
 # Last Modified: Thu 12. Jul 2012 20:16:13 +0200 CEST
 
@@ -10,7 +10,7 @@
 #
 # Depends: None
 #
-# Copyright (C) 2010,2011,2012 Jan Christoph Ebersbach
+# Copyright (C) 2010, 2011, 2012, 2013 Jan Christoph Ebersbach
 #
 # http://www.e-jc.de/
 #
@@ -35,7 +35,7 @@ import os
 import subprocess
 import sys
 
-__version__ = "0.5"
+__version__ = "0.6"
 
 
 # DesktopEntry exceptions
@@ -104,24 +104,24 @@ class DesktopEntry(object):
 
 		# determine filetype
 		de_type = 'Link'
-		if os.path.exists(target):
-			if os.path.isdir(target):
+		if os.path.exists(filename):
+			if os.path.isdir(filename):
 				de_type = 'Directory'
 				# TODO fix the value for directories
-				de.set_value('??', target)
+				de.set_value('??', filename)
 			else:
 				de_type = 'Application'
-				de.set_value('Exec', target)
-				de.set_value('Name', os.path.basename(target))
+				de.set_value('Exec', filename)
+				de.set_value('Name', os.path.basename(filename))
 				if os.name == 'posix':
-					whatis = subprocess.Popen(['whatis', target], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+					whatis = subprocess.Popen(['whatis', filename], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 					stdout, stderr = whatis.communicate()
 					res = stdout.decode(sys.stdin.encoding).split('- ', 1)
 					if len(res) == 2:
 						de.set_value('Comment', res[1].split(os.linesep, 1)[0])
 		else:
 			# type Link
-			de.set_value('URL', target)
+			de.set_value('URL', filename)
 
 		de.set_value('Type', de_type)
 
@@ -590,7 +590,7 @@ def get_autostart_directories():
 	return autostart_directories
 
 
-def get_autostart_files(verbose=False):
+def get_autostart_files(args, verbose=False):
 	"""
 	Generate a list of autostart files according to autostart-spec 0.5
 
@@ -627,6 +627,11 @@ def get_autostart_files(verbose=False):
 					print('Ignoring unknown file: %s' % _f, file=sys.stderr)
 				continue
 
+			if verbose:
+				if af.NotShowIn:
+					print('Not show in environments %s: %s' % (', '.join(af.NotShowIn), af.filename), file=sys.stderr)
+				if af.OnlyShowIn:
+					print('Only show in environments %s: %s' % (', '.join(af.OnlyShowIn), af.filename), file=sys.stderr)
 			if af in autostart_files or af in non_autostart_files:
 				if verbose:
 					print('Ignoring file, overridden by other autostart file: %s' % af.filename, file=sys.stderr)
@@ -654,93 +659,119 @@ def get_autostart_files(verbose=False):
 	return sorted(autostart_files)
 
 
-def _test():
+def _test(args):
+	"""
+	run tests
+	"""
 	import doctest
 	doctest.testmod()
+
+
+def _autostart(args):
+	"""
+	perform autostart
+	"""
+	if args.dryrun and args.verbose:
+		print('Dry run, nothing is executed.', file=sys.stderr)
+
+	exit_value = 0
+	for app in get_autostart_files(args, verbose=args.verbose):
+		try:
+			app.execute(dryrun=args.dryrun, verbose=args.verbose)
+		except Exception as ex:
+			exit_value = 1
+			print("Execution faild: %s%s%s" % (app.filename, os.linesep, ex), file=sys.stderr)
+
+
+def _run(args):
+	"""
+	execute specified DesktopEntry files
+	"""
+	if args.dryrun and args.verbose:
+		print('Dry run, nothing is executed.', file=sys.stderr)
+
+	exit_value = 0
+	if not args.files:
+		print("Nothing to execute, no DesktopEntry files specified!", file=sys.stderr)
+		parser.print_help()
+		exit_value = 1
+	else:
+		for f in args.files:
+			try:
+				app = Application(f)
+				app.execute(dryrun=args.dryrun, verbose=args.verbose)
+			except ValueError as ex:
+				print(ex, file=sys.stderr)
+			except IOError as ex:
+				print(ex, file=sys.stderr)
+			except Exception as ex:
+				exit_value = 1
+				print("Execution faild: %s%s%s" % (f, os.linesep, ex), file=sys.stderr)
+	return exit_value
+
+
+def _create(args):
+	"""
+	create a new DesktopEntry file from the given argument
+	"""
+	target = args.create[0]
+	if args.verbose:
+		print('Creating DesktopEntry for file %s.' % target)
+
+	de = DesktopEntry.fromfile(target)
+	if args.verbose:
+		print('Type: %s' % de.Type)
+
+	# determine output file
+	output = '.'.join((os.path.basename(target), 'directory' if
+		de.Type == 'Directory' else 'desktop'))
+	if args.targetdir:
+		output = os.path.join(args.targetdir[0], output)
+	elif len(args.create) > 1:
+		output = args.create[1]
+
+	if args.verbose:
+		print('Output: %s' % output)
+	targetfile = sys.stdout if output == '-' else open(output, 'w')
+	de.write(targetfile)
+
+	if args.targetdir and len(args.create) > 1:
+		args.create = args.create[1:]
+		return _create(args)
+	return 0
 
 
 # start execution
 if __name__ == '__main__':
 	from argparse import ArgumentParser
 	parser = ArgumentParser(usage='%(prog)s [options] [DesktopEntryFile [DesktopEntryFile ...]]',
-			description='dex, DesktopEntry Execution, is a program to generate and execute DesktopEntry files of the type Application',
-			epilog='Example usage: list autostart programs: dex -ad')
-	parser.add_argument("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
-	parser.add_argument("-c", "--create", nargs='+', dest="create", help="create a DesktopEntry file for the given program. If a second argument is provided it's taken as output filename or written to stdout (filname: -). By default a new file with the postfix .desktop is created")
-	parser.add_argument("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
-	parser.add_argument("-e", "--environment", nargs=1, dest="environment", help="specify the Desktop Environment an autostart should be performed for; works only in combination with --autostart")
-	parser.add_argument("-t", "--test", action="store_true", dest="test", help="perform a self-test")
+			description='dex, DesktopEntry Execution, is a program to generate and execute DesktopEntry files of the type Application', epilog='Example usage: list autostart programs: dex -ad')
+	parser.add_argument("--test", action="store_true", dest="test", help="perform a self-test")
 	parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="verbose output")
 	parser.add_argument("-V", "--version", action="store_true", dest="version", help="display version information")
 	parser.add_argument('files', nargs='*', help="DesktopEntry files")
-	parser.set_defaults(dryrun=False, test=False, autostart=False, verbose=False)
+
+	run = parser.add_argument_group('run')
+	run.add_argument("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
+	run.add_argument("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
+	run.add_argument("-e", "--environment", nargs=1, dest="environment", help="specify the Desktop Environment an autostart should be performed for; works only in combination with --autostart")
+
+	create = parser.add_argument_group('create')
+	create.add_argument("-c", "--create", nargs='+', dest="create", help="create a DesktopEntry file for the given program. If a second argument is provided it's taken as output filename or written to stdout (filname: -). By default a new file with the postfix .desktop is created")
+	create.add_argument("-t", "--target-directory", nargs=1, dest="targetdir", help="create files in target directory ")
+
+	parser.set_defaults(func=_run, dryrun=False, test=False, autostart=False, verbose=False)
 
 	args = parser.parse_args()
-
-	exit_value = 0
+	if args.autostart:
+		args.func = _autostart
+	elif args.create:
+		args.func = _create
+	elif args.test:
+		args.func = _test
 
 	# display version information
 	if args.version:
 		print("dex %s" % __version__)
-
-	# run tests
-	elif args.test:
-		_test()
-
-	# perform autostart
-	elif args.autostart:
-		if args.dryrun and args.verbose:
-			print('Dry run, nothing is executed.', file=sys.stderr)
-
-		for app in get_autostart_files(verbose=args.verbose):
-			try:
-				app.execute(dryrun=args.dryrun, verbose=args.verbose)
-			except Exception as ex:
-				exit_value = 1
-				print("Execution faild: %s%s%s" % (app.filename, os.linesep, ex), file=sys.stderr)
-
-	# create a new DesktopEntry file from the given argument
-	elif args.create:
-		target = args.create[0]
-		if args.verbose:
-			print('Creating DesktopEntry for file %s.' % target)
-
-		de = DesktopEntry.fromfile(target)
-		if args.verbose:
-			print('Type: %s' % de.Type)
-
-		# determine output file
-		output = '.'.join((os.path.basename(target), 'directory' if
-			de.Type == 'Directory' else 'desktop'))
-		if len(args.create) > 1:
-			output = args.create[1]
-
-		if args.verbose:
-			print('Output: %s' % output)
-		targetfile = sys.stdout if output == '-' else open(output, 'w')
-		de.write(targetfile)
-
-	# execute specified DesktopEntry files
 	else:
-		if args.dryrun and args.verbose:
-			print('Dry run, nothing is executed.', file=sys.stderr)
-
-		if not args.files:
-			print("Nothing to execute, no DesktopEntry files specified!", file=sys.stderr)
-			parser.print_help()
-			exit_value = 1
-		else:
-			for f in args.files:
-				try:
-					app = Application(f)
-					app.execute(dryrun=args.dryrun, verbose=args.verbose)
-				except ValueError as ex:
-					print(ex, file=sys.stderr)
-				except IOError as ex:
-					print(ex, file=sys.stderr)
-				except Exception as ex:
-					exit_value = 1
-					print("Execution faild: %s%s%s" % (f, os.linesep, ex), file=sys.stderr)
-
-	# exit program
-	sys.exit(exit_value)
+		sys.exit(args.func(args))
