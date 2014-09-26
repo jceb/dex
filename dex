@@ -571,22 +571,27 @@ def get_autostart_directories():
 	"""
 	autostart_directories = []  # autostart directories, ordered by preference
 
-	# generate list of autostart directories
-	if os.environ.get('XDG_CONFIG_HOME', None):
-		autostart_directories.append(os.path.join(os.environ.get('XDG_CONFIG_HOME'), 'autostart'))
+	if args.searchpaths:
+		for p in args.searchpaths[0].split(':'):
+			path = os.path.expanduser(p)
+			path = os.path.expandvars(path)
+			autostart_directories += [path]
 	else:
-		autostart_directories.append(os.path.join(os.environ['HOME'], '.config', 'autostart'))
+		# generate list of autostart directories
+		if os.environ.get('XDG_CONFIG_HOME', None):
+			autostart_directories.append(os.path.join(os.environ.get('XDG_CONFIG_HOME'), 'autostart'))
+		else:
+			autostart_directories.append(os.path.join(os.environ['HOME'], '.config', 'autostart'))
 
-	if os.environ.get('XDG_CONFIG_DIRS', None):
-		for d in os.environ['XDG_CONFIG_DIRS'].split(os.pathsep):
-			if not d:
-				continue
-			autostart_dir = os.path.join(d, 'autostart')
-			if autostart_dir not in autostart_directories:
-				autostart_directories.append(autostart_dir)
-	else:
-		autostart_directories.append(os.path.sep + os.path.join('etc', 'xdg', 'autostart'))
-
+		if os.environ.get('XDG_CONFIG_DIRS', None):
+			for d in os.environ['XDG_CONFIG_DIRS'].split(os.pathsep):
+				if not d:
+					continue
+				autostart_dir = os.path.join(d, 'autostart')
+				if autostart_dir not in autostart_directories:
+					autostart_directories.append(autostart_dir)
+		else:
+			autostart_directories.append(os.path.sep + os.path.join('etc', 'xdg', 'autostart'))
 	return autostart_directories
 
 
@@ -755,6 +760,7 @@ if __name__ == '__main__':
 	run.add_argument("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
 	run.add_argument("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
 	run.add_argument("-e", "--environment", nargs=1, dest="environment", help="specify the Desktop Environment an autostart should be performed for; works only in combination with --autostart")
+	run.add_argument("-s", "--search-paths", nargs=1, dest="searchpaths", help="colon separated list of paths to search for desktop files, overriding the default search list")
 
 	create = parser.add_argument_group('create')
 	create.add_argument("-c", "--create", nargs='+', dest="create", help="create a DesktopEntry file for the given program. If a second argument is provided it's taken as output filename or written to stdout (filname: -). By default a new file with the postfix .desktop is created")
