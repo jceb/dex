@@ -21,7 +21,7 @@ install: dex dex.1 README LICENSE
 
 tgz: source
 
-source: dex dex.1 README LICENSE Makefile
+source: dex dex.1 README LICENSE Makefile CHANGELOG.md
 	@echo "Creating source package: $(TAG).tar.gz"
 	@mkdir $(TAG)
 	@cp -t $(TAG) $+
