@@ -572,7 +572,7 @@ def get_autostart_directories():
 	autostart_directories = []  # autostart directories, ordered by preference
 
 	if args.searchpaths:
-		for p in args.searchpaths[0].split(':'):
+		for p in args.searchpaths[0].split(os.pathsep):
 			path = os.path.expanduser(p)
 			path = os.path.expandvars(path)
 			autostart_directories += [path]
