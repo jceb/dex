@@ -34,4 +34,4 @@ source: dex man/dex.1 README.rst LICENSE Makefile CHANGELOG.md
 clean:
 	@rm $(TAG).tar.gz
 
-.PHONY: build install tgz source
+.PHONY: build install tgz source clean
