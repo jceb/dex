@@ -11,6 +11,14 @@ Description
 
 ``dex``, DesktopEntry Execution, is a program to generate and execute DesktopEntry files of the Application type.
 
+Requirements
+------------
+
+* Python 3
+* PyXDG_
+
+.. _PyXDG: http://freedesktop.org/wiki/Software/pyxdg/
+
 Options
 -------
 
