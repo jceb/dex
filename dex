@@ -129,57 +129,32 @@ class DesktopEntry(object):
 
 	def load(self):
 		"""Load or reload contents of desktop entry file"""
+		from xdg.DesktopEntry import DesktopEntry
 		self.groups = {}     # clear settings
-		grp_desktopentry = 'Desktop Entry'
 
-		_f = open(self.filename, 'r')
-		current_group = None
-		try:
-			for l in _f.readlines():
-				l = l.strip('\n')
-				# handle comments and empty lines
-				if l.startswith('#') or l.strip() == '':
-					continue
+		de = DesktopEntry()
+		de.parse(self.filename)
+		content = de.content
 
-				# handle groups
-				if l.startswith('['):
-					if not l.endswith(']'):
-						raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because of line '%s'." % (self.filename, l))
-					group = l[1:-1]
-					if self.groups.get(group, None):
-						raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because group '%s' is specified multiple times." % (self.filename, group))
-					current_group = group
-					continue
+		for group_name, group in content.items():
+			for key, value in group.items():
+				self.set_value(key, value, group_name)
 
-				# handle all the other lines
-				if not current_group:
-					raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because line '%s' does not belong to a group." % (self.filename, l))
-				kv = l.split('=', 1)
-				if len(kv) != 2 or kv[0] == '':
-					raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because line '%s' is not a valid key=value pair." % (self.filename, l))
-				k = kv[0]
-				v = kv[1]
-				# TODO: parse k for locale specific settings
-				# TODO: parse v for multivalue fields
-				self.set_value(k, v, current_group)
-		except Exception as ex:
-			_f.close()
-			raise ex
-		finally:
-			_f.close()
+		if 'Desktop Entry' not in self.groups:
+			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry group is missing." % (self.filename))
 
-		if grp_desktopentry not in self.groups:
-			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry group is missing." % (self.filename, ))
 		if not (self.Type and self.Name):
-			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type or Name keys are missing." % (self.filename, ))
-		_type = self.Type
-		if  _type == 'Application':
+			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type or Name keys are missing." % (self.filename))
+
+		if self.Type == 'Application':
 			if not self.Exec:
-				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry of type '%s' because Exec is missing." % (self.filename, _type))
-		elif  _type == 'Link':
+				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry of type '%s' because Exec is missing." % (self.filename, self.Type))
+
+		elif self.Type == 'Link':
 			if not self.URL:
-				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry of type '%s' because URL is missing." % (self.filename, _type))
-		elif  _type == 'Directory':
+				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry of type '%s' because URL is missing." % (self.filename, self.Type))
+
+		elif self.Type == 'Directory':
 			pass
 		else:
 			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type '%s' is unkown." % (self.filename, self.Type))
