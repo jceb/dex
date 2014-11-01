@@ -6,5 +6,7 @@ All notable changes to this project will be documented in this file.
 - Add -s switch to specify the search paths (thanks to  Johannes Löthberg)
 
 ### Changed
+- Mark clean target PHONY
+- Switch to RST for the README and manpaeg
 
 ### Removed
