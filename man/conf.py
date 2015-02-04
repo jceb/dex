@@ -11,5 +11,5 @@ source_suffix = '.rst'
 # (source start file, name, description, authors, manual section).
 man_pages = [
     ('dex', 'dex', 'DesktopEntry Execution',
-     ['Jan Christoph Ebersbach', 'Johannes Löthberg'], 1)
+     ['Jan Christoph Ebersbach', u'Johannes Löthberg'], 1)
 ]
