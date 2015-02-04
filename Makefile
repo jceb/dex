@@ -32,7 +32,7 @@ source: dex man/dex.1 README.rst LICENSE Makefile CHANGELOG.md
 	@rm -rf $(TAG)
 
 clean:
-	@rm $(TAG).tar.gz
-	@rm man/dex.1
+	@rm -f $(TAG).tar.gz
+	@rm -f man/dex.1
 
 .PHONY: build install tgz source clean
