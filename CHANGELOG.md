@@ -9,4 +9,8 @@ All notable changes to this project will be documented in this file.
 - Mark clean target PHONY
 - Switch to RST for the README and manpaeg
 
+### Fixed
+- add force to clean target (#25, thanks to  Johannes Löthberg)
+- Turn utf-8 string into Unicode string literal  (#23, thanks to  Johannes Löthberg)
+
 ### Removed
