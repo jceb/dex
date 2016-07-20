@@ -477,8 +477,9 @@ class Application(DesktopEntry):
 						continue
 
 				elif c == '\\':
-					in_esc = True
-					continue
+					if not in_quote:
+						in_esc = True
+						continue
 
 				elif c == '%' and not (in_quote or in_singlequote):
 					in_fieldcode = True
