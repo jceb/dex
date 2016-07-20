@@ -173,7 +173,7 @@ class DesktopEntry(object):
 		if not (self.Type and self.Name):
 			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type or Name keys are missing." % (self.filename, ))
 		_type = self.Type
-		if  _type == 'Application':
+		if  _type in ('Application', 'Service'):
 			if not self.Exec:
 				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry of type '%s' because Exec is missing." % (self.filename, _type))
 		elif  _type == 'Link':
@@ -342,7 +342,7 @@ class Application(DesktopEntry):
 			filename = os.path.join(os.getcwd(), filename)
 		super(Application, self).__init__(filename)
 		self._basename = os.path.basename(filename)
-		if self.Type != 'Application':
+		if self.Type not in ('Application', 'Service'):
 			raise DesktopEntryTypeException("'%s' is not of type 'Application'." % self.filename)
 
 	def __cmp__(self, y):

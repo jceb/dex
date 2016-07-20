@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 ## 0.8 - UNRELEASED
 ### Added
 - Add -s switch to specify the search paths (thanks to  Johannes Löthberg)
+- Add support for KDE's proprietary Service type (#7 and #28, thanks to
+  Sébastien Luttringer and Konfekt)
 
 ### Changed
 - Mark clean target PHONY
@@ -12,6 +14,6 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - add force to clean target (#25, thanks to  Johannes Löthberg)
-- Turn utf-8 string into Unicode string literal  (#23, thanks to  Johannes Löthberg)
+- Turn utf-8 string into Unicode string literal (#23, thanks to  Johannes Löthberg)
 
 ### Removed
