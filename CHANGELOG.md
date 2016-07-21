@@ -17,5 +17,6 @@ All notable changes to this project will be documented in this file.
 - add force to clean target (#25, thanks to  Johannes Löthberg)
 - Turn utf-8 string into Unicode string literal (#23, thanks to  Johannes
   Löthberg)
+- Fix error converting man page
 
 ### Removed
