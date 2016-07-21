@@ -171,7 +171,9 @@ class DesktopEntry(object):
 		if grp_desktopentry not in self.groups:
 			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry group is missing." % (self.filename, ))
 		if not (self.Type and self.Name):
-			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type or Name keys are missing." % (self.filename, ))
+			if self.Type != 'Service':
+				# allow files with type Service and no Name
+				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type or Name keys are missing." % (self.filename, ))
 		_type = self.Type
 		if  _type in ('Application', 'Service'):
 			if not self.Exec:
