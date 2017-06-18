@@ -1,7 +1,7 @@
 # Change Log
 All notable changes to this project will be documented in this file.
 
-## 0.8 - UNRELEASED
+## [0.8.0] - 2017-06-18
 ### Added
 - Add -s switch to specify the search paths (thanks to  Johannes Löthberg)
 - Add support for KDE's proprietary Service type (#7 and #28, thanks to
@@ -18,6 +18,5 @@ All notable changes to this project will be documented in this file.
 - Turn utf-8 string into Unicode string literal (#23, thanks to  Johannes
   Löthberg)
 - Fix error converting man page
-- Print nice error message when target directory doesn't exist (#31, thanks to @lasers)
-
-### Removed
+- Print nice error message when target directory doesn't exist (#31, thanks to
+  @lasers)
