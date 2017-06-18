@@ -18,5 +18,6 @@ All notable changes to this project will be documented in this file.
 - Turn utf-8 string into Unicode string literal (#23, thanks to  Johannes
   Löthberg)
 - Fix error converting man page
+- Print nice error message when target directory doesn't exist (#31, thanks to @lasers)
 
 ### Removed
