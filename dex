@@ -740,7 +740,12 @@ def _create(args):
 
 	if args.verbose:
 		print('Output: %s' % output)
-	targetfile = sys.stdout if output == '-' else open(output, 'w')
+
+	try:
+		targetfile = sys.stdout if output == '-' else open(output, 'w')
+	except FileNotFoundError:
+		print('Target directory does not exist: %s' % os.path.dirname(output))
+		return 1
 	de.write(targetfile)
 
 	if args.targetdir and len(args.create) > 1:
