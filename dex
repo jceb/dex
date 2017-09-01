@@ -184,7 +184,7 @@ class DesktopEntry(object):
 		elif  _type == 'Directory':
 			pass
 		else:
-			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type '%s' is unkown." % (self.filename, self.Type))
+			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type '%s' is unknown." % (self.filename, self.Type))
 
 	# another name for load
 	reload = load
