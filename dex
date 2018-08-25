@@ -132,7 +132,7 @@ class DesktopEntry(object):
 		self.groups = {}     # clear settings
 		grp_desktopentry = 'Desktop Entry'
 
-		_f = open(self.filename, 'r')
+		_f = open(self.filename, 'r', encoding='utf-8')
 		current_group = None
 		try:
 			for l in _f.readlines():
@@ -742,7 +742,7 @@ def _create(args):
 		print('Output: %s' % output)
 
 	try:
-		targetfile = sys.stdout if output == '-' else open(output, 'w')
+		targetfile = sys.stdout if output == '-' else open(output, 'w', encoding='utf-8')
 	except FileNotFoundError:
 		print('Target directory does not exist: %s' % os.path.dirname(output))
 		return 1
