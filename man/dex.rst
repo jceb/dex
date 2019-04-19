@@ -35,6 +35,9 @@ Options
 -t DIRECTORY, --target-directory DIRECTORY
         Create files in target directory
 
+--term TERM
+        The terminal emulator that will be used to run the program if Terminal=true is set in the desktop file, defaults to x-terminal-emulator
+
 --test
         Perform a self-test
 
@@ -74,3 +77,7 @@ Create a DesktopEntry for a programs in autostart directory.
 Execute a single program from command line and enable verbose output.
 
         :program:`dex -v skype.desktop`
+
+Execute a single program (with Terminal=true in the desktop file) in gnome-terminal.
+
+        :program:`dex --term gnome-terminal nvim.desktop`
