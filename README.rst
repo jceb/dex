@@ -41,6 +41,8 @@ Options
 |                                    | if Terminal=true is set in the desktop file, defaults to   |
 |                                    | x-terminal-emulator.                                       |
 +------------------------------------+------------------------------------------------------------+
+| -w, --wait                         | Block until the program exits.                             |
++------------------------------------+------------------------------------------------------------+
 | --test                             | Perform a self-test                                        |
 +------------------------------------+------------------------------------------------------------+
 | -v, --verbose                      | Verbose output                                             |
@@ -82,3 +84,7 @@ Execute a single program from command line and enable verbose output.
 Execute a single program (with Terminal=true in the desktop file) in gnome-terminal.
 
         ``dex --term gnome-terminal nvim.desktop``
+
+Execute a single program and block until it exits.
+
+        ``dex --wait nvim.desktop``
