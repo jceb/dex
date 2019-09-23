@@ -499,6 +499,8 @@ class Application(DesktopEntry):
 		_exec = True
 		_try = self.TryExec
 		if _try and not (os.path.isabs(_try) and os.path.isfile(_try)) and not which(_try):
+			if verbose:
+				print('Ignoring file, TryExec not found: %s' % _try, file=sys.stderr)
 			_exec = False
 
 		if _exec:
