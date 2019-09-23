@@ -29,12 +29,25 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import glob
+__version__ = "0.10.1"
+
 import os
 import subprocess
 import sys
 
-__version__ = "0.10.1"
+try:
+	from os import scandir
+except ImportError:
+	class _DirEntry:
+		def __init__(self, name, path):
+			self.name = name
+			self.path = path
+
+		def is_file(self):
+			return os.path.isfile(self.path)
+
+	def scandir(path="."):
+		return [_DirEntry(f, os.path.join(path, f)) for f in os.listdir(path)]
 
 
 # DesktopEntry exceptions
@@ -559,21 +572,19 @@ def get_autostart_files(args, verbose=False):
 	autostart_files = []  # autostart files, excluding files marked as hidden
 
 	for d in get_autostart_directories():
-		for _f in glob.glob1(d, '*.desktop'):
-			_p = os.path.join(d, _f)
-
-			if not os.path.isfile(_p):
+		for entry in scandir(d):
+			if not entry.is_file() or not entry.name.endswith(".desktop"):
 				if verbose:
-					print('Ignoring non-file: %s' % _p, file=sys.stderr)
+					print('Ignoring non-file: %s' % entry.path, file=sys.stderr)
 				continue
-			elif _f in seen_files:
+			elif entry.name in seen_files:
 				if verbose:
-					print('Ignoring file, overridden by other autostart file: %s' % _p, file=sys.stderr)
+					print('Ignoring file, overridden by other autostart file: %s' % entry.path, file=sys.stderr)
 				continue
 
-			seen_files.add(_f)
+			seen_files.add(entry.name)
 			try:
-				af = Application(_p)
+				af = Application(entry.path)
 			except DesktopEntryTypeException as ex:
 				continue
 			except ValueError as ex:
