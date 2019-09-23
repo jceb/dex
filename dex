@@ -346,29 +346,6 @@ class Application(DesktopEntry):
 		if self.Type not in ('Application', 'Service'):
 			raise DesktopEntryTypeException("'%s' is not of type 'Application'." % self.filename)
 
-	def __cmp__(self, y):
-		"""
-		@param	y	The object to compare the current object with - comparison is made on the property of basename
-		"""
-		if isinstance(y, Application):
-			return cmp(y.basename, self.basename)
-		return -1
-
-	def __eq__(self, y):
-		"""
-		@param	y	The object to compare the current object with - comparison is made on the property of basename
-		"""
-		if isinstance(y, Application):
-			return y.basename == self.basename
-		return False
-
-	@property
-	def basename(self):
-		"""
-		The basename of file
-		"""
-		return self._basename
-
 	@classmethod
 	def _build_cmd(cls, exec_string, needs_terminal=False, term='x-terminal-emulator'):
 		"""
@@ -532,34 +509,6 @@ class Application(DesktopEntry):
 			return _execute_fn(cmd, env=os.environ)
 
 
-class AutostartFile(Application):
-	"""
-	Implements autostart files
-	"""
-
-	def __init__(self, filename):
-		"""
-		@param	filename	Absolute path to a Desktop Entry File
-		"""
-		super(AutostartFile, self).__init__(filename)
-
-
-class EmptyAutostartFile(Application):
-	"""
-	Workaround for empty autostart files that don't contain the necessary data
-	"""
-
-	def __init__(self, filename):
-		"""
-		@param	filename	Absolute path to a Desktop Entry File
-		"""
-		try:
-			super(EmptyAutostartFile, self).__init__(filename)
-		except DesktopEntryTypeException:
-			# ignore the missing type information
-			pass
-
-
 # local methods
 def which(filename):
 	path = os.environ.get('PATH', None)
@@ -606,33 +555,34 @@ def get_autostart_files(args, verbose=False):
 
 	TODO: do filetype recognition according to spec
 	"""
+	seen_files = set()
 	autostart_files = []  # autostart files, excluding files marked as hidden
-	non_autostart_files = []
 
 	for d in get_autostart_directories():
 		for _f in glob.glob1(d, '*.desktop'):
-			_f = os.path.join(d, _f)
-			af = None
+			_p = os.path.join(d, _f)
 
-			if os.path.isfile(_f) or os.path.islink(_f):
-				try:
-					af = AutostartFile(_f)
-				except DesktopEntryTypeException as ex:
-					af = EmptyAutostartFile(_f)
-					if af not in autostart_files and not af in non_autostart_files:
-						non_autostart_files.append(af)
-					continue
-				except ValueError as ex:
-					if verbose:
-						print(ex, file=sys.stderr)
-					continue
-				except IOError as ex:
-					if verbose:
-						print(ex, file=sys.stderr)
-					continue
-			else:
+			if not os.path.isfile(_p):
 				if verbose:
-					print('Ignoring unknown file: %s' % _f, file=sys.stderr)
+					print('Ignoring non-file: %s' % _p, file=sys.stderr)
+				continue
+			elif _f in seen_files:
+				if verbose:
+					print('Ignoring file, overridden by other autostart file: %s' % _p, file=sys.stderr)
+				continue
+
+			seen_files.add(_f)
+			try:
+				af = Application(_p)
+			except DesktopEntryTypeException as ex:
+				continue
+			except ValueError as ex:
+				if verbose:
+					print(ex, file=sys.stderr)
+				continue
+			except IOError as ex:
+				if verbose:
+					print(ex, file=sys.stderr)
 				continue
 
 			if verbose:
@@ -640,30 +590,22 @@ def get_autostart_files(args, verbose=False):
 					print('Not show in environments %s: %s' % (', '.join(af.NotShowIn), af.filename), file=sys.stderr)
 				if af.OnlyShowIn:
 					print('Only show in environments %s: %s' % (', '.join(af.OnlyShowIn), af.filename), file=sys.stderr)
-			if af in autostart_files or af in non_autostart_files:
-				if verbose:
-					print('Ignoring file, overridden by other autostart file: %s' % af.filename, file=sys.stderr)
-				continue
-			elif af.Hidden:
+
+			if af.Hidden:
 				if verbose:
 					print('Ignoring file, hidden attribute is set: %s' % af.filename, file=sys.stderr)
-				non_autostart_files.append(af)
 				continue
 			elif af.OnlyShowIn and not (args.environment and args.environment in af.OnlyShowIn):
 				if verbose:
 					print('Ignoring file, it must only start in specific environments (%s): %s' % (', '.join(af.OnlyShowIn), af.filename), file=sys.stderr)
-				non_autostart_files.append(af)
 				continue
 			elif af.NotShowIn and args.environment and args.environment in af.NotShowIn:
 				if verbose:
 					print('Ignoring file, it must not start in specific environments (%s): %s' % (', '.join(af.NotShowIn), af.filename), file=sys.stderr)
-				non_autostart_files.append(af)
 				continue
 
 			autostart_files.append(af)
-	if verbose:
-		for i in non_autostart_files:
-			print('Ignoring empty file: %s' % i.filename, file=sys.stderr)
+
 	return sorted(autostart_files)
 
 
