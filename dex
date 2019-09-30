@@ -675,7 +675,7 @@ def _test(args):
 	run tests
 	"""
 	import doctest
-	doctest.testmod()
+	return doctest.testmod()
 
 
 def _autostart(args):
