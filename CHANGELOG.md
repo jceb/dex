@@ -3,6 +3,7 @@ All notable changes to this project will be documented in this file.
 
 ## [0.8.0] - 2017-06-18
 ### Added
+- Pass environment to sub processes
 - Add -s switch to specify the search paths (thanks to  Johannes Löthberg)
 - Add support for KDE's proprietary Service type (#7 and #28, thanks to
   Sébastien Luttringer and Konfekt)

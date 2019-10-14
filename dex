@@ -527,10 +527,10 @@ class Application(DesktopEntry):
 				return None
 			_execute_fn = subprocess.Popen
 			if wait:
-				_execute_fn = subprocess.call
+				_execute_fn = subprocess.run
 			if path:
-				return _execute_fn(cmd, cwd=path)
-			return _execute_fn(cmd)
+				return _execute_fn(cmd, cwd=path, env=os.environ)
+			return _execute_fn(cmd, env=os.environ)
 
 
 class AutostartFile(Application):
