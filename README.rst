@@ -106,21 +106,21 @@ configuration:
 - Create an autostart target at ``~/.config/systemd/user/autostart.target``
   with the following content::
 
-        ``[Unit]
+        [Unit]
         Description=Current graphical user session
         Documentation=man:systemd.special(7)
         RefuseManualStart=no
-        StopWhenUnneeded=no``
+        StopWhenUnneeded=no
 
 - Create service files at ``~/.config/systemd/user/<service name>.service`` that
   service the same purpose as the ``<service>.desktop`` files created by
   ``dex``. The service file should have at least the following content::
 
-        ``[Unit]
+        [Unit]
         Description=<service description>
 
         [Service]
-        ExecStart=<path to the executable> [<parameters>]``
+        ExecStart=<path to the executable> [<parameters>]
 
   - Attention: for the service to work properly it mustn't fork. Systemd will
     take care of the service management but it can only do this when the service
@@ -132,33 +132,33 @@ configuration:
 
 - Register the service with systemd:
 
-  ``systemctl --user add-wants autostart.target <service name>.service``
+      ``systemctl --user add-wants autostart.target <service name>.service``
 
   - Unregister services with systemd:
 
-  ``systemctl --user disable <service name>.service``
+      ``systemctl --user disable <service name>.service``
 
   - List the currently active services:
 
-  ``systemctl --user list-units``
+      ``systemctl --user list-units``
 
 - Finally, start all services in the autostart target during startup by
   replacing the ``dex`` command with:
 
-  ``systemctl --user start autostart.target``
+      ``systemctl --user start autostart.target``
 
   - Reload service configuration after making changes to a service file:
 
-    ``systemctl --user daemon-reload``
+        ``systemctl --user daemon-reload``
 
   - Start a service manually:
 
-    ``systemctl --user start <service name>``
+        ``systemctl --user start <service name>``
 
   - Check the status of a service manually:
 
-    ``systemctl --user status <service name>``
+        ``systemctl --user status <service name>``
 
   - Stop a service manually:
 
-    ``systemctl --user stop <service name>``
+        ``systemctl --user stop <service name>``
