@@ -89,8 +89,8 @@ Execute a single program and block until it exits.
 
         ``dex --wait nvim.desktop``
 
-Alternative
------------
+Alternative Autostart
+---------------------
 
 I consider ``systemd/user`` as a good alternative for ``dex``'s autostart
 functionality and switched to it recently. In particular, systemd solves the
