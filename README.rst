@@ -130,35 +130,35 @@ configuration:
     required parameters that need to be provided to the service to avoid
     forking.
 
-- Register the service with systemd:
+- Register a service with systemd:
 
       ``systemctl --user add-wants autostart.target <service name>.service``
 
-  - Unregister services with systemd:
+  - Unregister a service:
 
       ``systemctl --user disable <service name>.service``
 
-  - List the currently active services:
+  - List currently active services:
 
       ``systemctl --user list-units``
 
 - Finally, start all services in the autostart target during startup by
-  replacing the ``dex`` command with:
+  replacing the ``dex -a`` command with:
 
       ``systemctl --user start autostart.target``
 
-  - Reload service configuration after making changes to a service file:
+  - Reload all service configurations after making changes to a service file:
 
         ``systemctl --user daemon-reload``
 
-  - Start a service manually:
+  - Start a service:
 
-        ``systemctl --user start <service name>``
+        ``systemctl --user start <service name>.service``
 
-  - Check the status of a service manually:
+  - Check the status of a service:
 
-        ``systemctl --user status <service name>``
+        ``systemctl --user status <service name>.service``
 
-  - Stop a service manually:
+  - Stop a service:
 
-        ``systemctl --user stop <service name>``
+        ``systemctl --user stop <service name>.service``
