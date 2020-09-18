@@ -24,10 +24,13 @@ Options
         Create a DesktopEntry file for the program at the given path. An optional second argument is used to specify the filename of the created DesktopEntry file, or specify the filename - to print the file to stdout. By default a new file is created with the .desktop file extension.
 
 -d, --dry-run
-        Dry run, don't execute any command
+        Dry run, dont execute any command
 
 -e ENVIRONMENT, --environment ENVIRONMENT
         Specify the Desktop Environment an autostart should be performed for; works only in combination with --autostart
+
+-p PROPERTY, --property PROPERTY
+        Display DesktopEntry property value. Supported properties are: Type, Version, Name, NoDisplay, Hidden, OnlyShowIn, NotShowIn, TryExec, Exec, Path, Terminal, StartupNotify, StartupWMClass, URL
 
 -s SEARCHPATHS, --search-paths SEARCHPATHS
         Colon separated list of paths to search for desktop files, overriding the default search list
@@ -68,6 +71,10 @@ Preview the programs would be executed in a regular autostart.
 Preview the programs would be executed in a GNOME specific autostart.
 
         :program:`dex -ad -e GNOME`
+
+Preview the value of DesktopEntry property Name.
+
+        :program:`dex -p Name htop.desktop`
 
 Create a DesktopEntry for a program in the current directory.
 
