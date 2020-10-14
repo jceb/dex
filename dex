@@ -691,7 +691,7 @@ def _autostart(args):
 			app.execute(dryrun=args.dryrun, verbose=args.verbose)
 		except Exception as ex:
 			exit_value = 1
-			print("Execution faild: %s%s%s" % (app.filename, os.linesep, ex), file=sys.stderr)
+			print("Execution failed: %s%s%s" % (app.filename, os.linesep, ex), file=sys.stderr)
 
 
 def _run(args):
@@ -717,7 +717,7 @@ def _run(args):
 				print(ex, file=sys.stderr)
 			except Exception as ex:
 				exit_value = 1
-				print("Execution faild: %s%s%s" % (f, os.linesep, ex), file=sys.stderr)
+				print("Execution failed: %s%s%s" % (f, os.linesep, ex), file=sys.stderr)
 	return exit_value
 
 
