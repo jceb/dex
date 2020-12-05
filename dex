@@ -29,7 +29,6 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
 import glob
 import os
 import subprocess
@@ -607,8 +606,6 @@ def get_autostart_files(args, verbose=False):
 
 	TODO: do filetype recognition according to spec
 	"""
-	environment = args.environment[0].lower() if args.environment else ''
-
 	autostart_files = []  # autostart files, excluding files marked as hidden
 	non_autostart_files = []
 
@@ -652,17 +649,17 @@ def get_autostart_files(args, verbose=False):
 					print('Ignoring file, hidden attribute is set: %s' % af.filename, file=sys.stderr)
 				non_autostart_files.append(af)
 				continue
-			elif environment:
-				if environment in [x.lower() for x in af.NotShowIn]:
-					if verbose:
-						print('Ignoring file, it must not start in specific environments (%s): %s' % (', '.join(af.NotShowIn), af.filename), file=sys.stderr)
-					non_autostart_files.append(af)
-					continue
-				elif af.OnlyShowIn and environment not in [x.lower() for x in af.OnlyShowIn]:
-					if verbose:
-						print('Ignoring file, it must only start in specific environments (%s): %s' % (', '.join(af.OnlyShowIn), af.filename), file=sys.stderr)
-					non_autostart_files.append(af)
-					continue
+			elif af.OnlyShowIn and not (args.environment and args.environment in af.OnlyShowIn):
+				if verbose:
+					print('Ignoring file, it must only start in specific environments (%s): %s' % (', '.join(af.OnlyShowIn), af.filename), file=sys.stderr)
+				non_autostart_files.append(af)
+				continue
+			elif af.NotShowIn and args.environment and args.environment in af.NotShowIn:
+				if verbose:
+					print('Ignoring file, it must not start in specific environments (%s): %s' % (', '.join(af.NotShowIn), af.filename), file=sys.stderr)
+				non_autostart_files.append(af)
+				continue
+
 			autostart_files.append(af)
 	if verbose:
 		for i in non_autostart_files:
@@ -817,7 +814,7 @@ if __name__ == '__main__':
 	run = parser.add_argument_group('run')
 	run.add_argument("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
 	run.add_argument("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
-	run.add_argument("-e", "--environment", nargs=1, dest="environment", help="specify the Desktop Environment an autostart should be performed for; works only in combination with --autostart")
+	run.add_argument("-e", "--environment", dest="environment", help="specify the Desktop Environment an autostart should be performed for; works only in combination with --autostart")
 	run.add_argument("-s", "--search-paths", nargs=1, dest="searchpaths", help="colon separated list of paths to search for desktop files, overriding the default search list")
 	run.add_argument("--term", dest="term", help="the terminal emulator that will be used to run the program if Terminal=true is set in the desktop file, defaults to x-terminal-emulator")
 	run.add_argument("-w", "--wait", action="store_true", dest="wait", help="block until the program exits")
