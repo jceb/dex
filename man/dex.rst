@@ -24,7 +24,7 @@ Options
         Create a DesktopEntry file for the program at the given path. An optional second argument is used to specify the filename of the created DesktopEntry file, or specify the filename - to print the file to stdout. By default a new file is created with the .desktop file extension.
 
 -d, --dry-run
-        Dry run, dont execute any command
+        Dry run, don't execute any command
 
 -e ENVIRONMENT, --environment ENVIRONMENT
         Specify the Desktop Environment an autostart should be performed for; works only in combination with --autostart
