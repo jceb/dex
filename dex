@@ -34,7 +34,7 @@ import os
 import subprocess
 import sys
 
-__version__ = "0.10.0"
+__version__ = "0.10.1"
 
 
 # DesktopEntry exceptions
@@ -753,6 +753,50 @@ def _create(args):
 		return _create(args)
 	return 0
 
+def _property(args):
+	"""
+	Display DesktopEntry property value
+	"""
+	exit_value = 0
+	if not args.files:
+		print("Nothing to parse, no DesktopEntry files specified!", file=sys.stderr)
+		parser.print_help()
+		exit_value = 1
+	else:
+		properties = (
+			'Type',
+			'Version',
+			'Name',
+			'NoDisplay',
+			'Hidden',
+			'OnlyShowIn',
+			'NotShowIn',
+			'TryExec',
+			'Exec',
+			'Path',
+			'Terminal',
+			'StartupNotify',
+			'StartupWMClass',
+			'URL'
+		)
+		property = args.property[0]
+		for f in args.files:
+			try:
+				app = Application(f)
+				if property in properties:
+					print(getattr(app, property))
+				else:
+					exit_value = 1
+					print("'%s' is not a valid Desktop Entry property." % property, file=sys.stderr)
+			except ValueError as ex:
+				print(ex, file=sys.stderr)
+			except IOError as ex:
+				print(ex, file=sys.stderr)
+			except Exception as ex:
+				exit_value = 1
+				print("Parse failed: %s%s%s" % (f, os.linesep, ex), file=sys.stderr)
+	return exit_value
+
 
 # start execution
 if __name__ == '__main__':
@@ -763,6 +807,9 @@ if __name__ == '__main__':
 	parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="verbose output")
 	parser.add_argument("-V", "--version", action="store_true", dest="version", help="display version information")
 	parser.add_argument('files', nargs='*', help="DesktopEntry files")
+
+	property = parser.add_argument_group('property')
+	property.add_argument("-p", "--property", nargs=1, dest="property", help="display DesktopEntry property value. Supported properties are: Type, Version, Name, NoDisplay, Hidden, OnlyShowIn, NotShowIn, TryExec, Exec, Path, Terminal, StartupNotify, StartupWMClass, URL")
 
 	run = parser.add_argument_group('run')
 	run.add_argument("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
@@ -785,6 +832,8 @@ if __name__ == '__main__':
 		args.func = _create
 	elif args.test:
 		args.func = _test
+	elif args.property:
+		args.func = _property
 
 	# display version information
 	if args.version:
