@@ -685,7 +685,7 @@ def _autostart(args):
 	exit_value = 0
 	for app in get_autostart_files(args, verbose=args.verbose):
 		try:
-			app.execute(dryrun=args.dryrun, verbose=args.verbose)
+			app.execute(term=args.term, dryrun=args.dryrun, verbose=args.verbose)
 		except Exception as ex:
 			exit_value = 1
 			print("Execution failed: %s%s%s" % (app.filename, os.linesep, ex), file=sys.stderr)
