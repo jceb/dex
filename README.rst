@@ -1,6 +1,9 @@
 dex
 ===
 
+.. image:: https://travis-ci.org/jceb/dex.svg?branch=master
+    :target: https://travis-ci.org/jceb/dex
+
 Synopsis
 --------
 
