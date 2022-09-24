@@ -29,12 +29,25 @@
 # You should have received a copy of the GNU General Public License along
 # with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import glob
+__version__ = "0.10.1"
+
 import os
 import subprocess
 import sys
 
-__version__ = "0.10.1"
+try:
+	from os import scandir
+except ImportError:
+	class _DirEntry:
+		def __init__(self, name, path):
+			self.name = name
+			self.path = path
+
+		def is_file(self):
+			return os.path.isfile(self.path)
+
+	def scandir(path="."):
+		return [_DirEntry(f, os.path.join(path, f)) for f in os.listdir(path)]
 
 
 # DesktopEntry exceptions
@@ -131,13 +144,12 @@ class DesktopEntry(object):
 		self.groups = {}     # clear settings
 		grp_desktopentry = 'Desktop Entry'
 
-		_f = open(self.filename, 'r')
-		current_group = None
-		try:
-			for l in _f.readlines():
+		with open(self.filename, 'r') as fp:
+			current_group = None
+			for l in fp:
 				l = l.strip('\n')
 				# handle comments and empty lines
-				if l.startswith('#') or l.strip() == '':
+				if l.startswith('#') or l.isspace() or not l:
 					continue
 
 				# handle groups
@@ -145,7 +157,7 @@ class DesktopEntry(object):
 					if not l.endswith(']'):
 						raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because of line '%s'." % (self.filename, l))
 					group = l[1:-1]
-					if self.groups.get(group, None):
+					if group in self.groups:
 						raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because group '%s' is specified multiple times." % (self.filename, group))
 					current_group = group
 					continue
@@ -161,26 +173,21 @@ class DesktopEntry(object):
 				# TODO: parse k for locale specific settings
 				# TODO: parse v for multivalue fields
 				self.set_value(k, v, current_group)
-		except Exception as ex:
-			_f.close()
-			raise ex
-		finally:
-			_f.close()
 
 		if grp_desktopentry not in self.groups:
 			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry group is missing." % (self.filename, ))
-		if not (self.Type and self.Name):
+		if not self.Type or not self.Name:
 			if self.Type != 'Service':
 				# allow files with type Service and no Name
 				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type or Name keys are missing." % (self.filename, ))
 		_type = self.Type
-		if  _type in ('Application', 'Service'):
+		if _type in ('Application', 'Service'):
 			if not self.Exec:
 				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry of type '%s' because Exec is missing." % (self.filename, _type))
-		elif  _type == 'Link':
+		elif _type == 'Link':
 			if not self.URL:
 				raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry of type '%s' because URL is missing." % (self.filename, _type))
-		elif  _type == 'Directory':
+		elif _type == 'Directory':
 			pass
 		else:
 			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type '%s' is unknown." % (self.filename, self.Type))
@@ -188,15 +195,15 @@ class DesktopEntry(object):
 	# another name for load
 	reload = load
 
-	def write(self, fileobject):
+	def write(self, fp):
 		"""Write DesktopEntry to a file
 
-		@param	fileobject	DesktopEntry is written to file
+		@param	fp	DesktopEntry is written to file
 		"""
 		for group in self.groups:
-			fileobject.write('[%s]\n' % (group, ))
+			fp.write('[%s]\n' % (group, ))
 			for key in self.groups[group]:
-				fileobject.write('%s=%s\n' % (key, self.groups[group][key]))
+				fp.write('%s=%s\n' % (key, self.groups[group][key]))
 
 	def set_value(self, key, value, group='Desktop Entry'):
 		""" Set a key, value pair in group
@@ -215,10 +222,7 @@ class DesktopEntry(object):
 			self.load()
 		if group not in self.groups:
 			raise KeyError("Group '%s' not found." % group)
-		grp = self.groups[group]
-		if key not in grp:
-			return default
-		return grp[key]
+		return self.groups[group].get(key, default)
 
 	def get_boolean(self, key, group='Desktop Entry', default=False):
 		val = self._get_value(key, group=group, default=default)
@@ -345,29 +349,6 @@ class Application(DesktopEntry):
 		self._basename = os.path.basename(filename)
 		if self.Type not in ('Application', 'Service'):
 			raise DesktopEntryTypeException("'%s' is not of type 'Application'." % self.filename)
-
-	def __cmp__(self, y):
-		"""
-		@param	y	The object to compare the current object with - comparison is made on the property of basename
-		"""
-		if isinstance(y, Application):
-			return cmp(y.basename, self.basename)
-		return -1
-
-	def __eq__(self, y):
-		"""
-		@param	y	The object to compare the current object with - comparison is made on the property of basename
-		"""
-		if isinstance(y, Application):
-			return y.basename == self.basename
-		return False
-
-	@property
-	def basename(self):
-		"""
-		The basename of file
-		"""
-		return self._basename
 
 	@classmethod
 	def _build_cmd(cls, exec_string, needs_terminal=False, term='x-terminal-emulator'):
@@ -506,58 +487,34 @@ class Application(DesktopEntry):
 		Execute application
 		@return	Return subprocess.Popen object
 		"""
-		_exec = True
-		_try = self.TryExec
-		if _try and not (os.path.isabs(_try) and os.path.isfile(_try)) and not which(_try):
-			_exec = False
-
-		if _exec:
-			path = self.Path
-			cmd = self._build_cmd(exec_string=self.Exec, needs_terminal=self.Terminal, term=term)
-			if not cmd:
-				raise ApplicationExecException('Failed to build command string.')
-			if dryrun or verbose:
+		if self.TryExec:
+			executable = self.TryExec
+			if not os.path.isabs(executable):
+				executable = which(executable)
+			if not os.access(executable, mode=os.F_OK | os.X_OK):
 				if verbose:
-					print('Autostart file: %s' % self.filename)
-				if path:
-					print('Changing directory to: ' + path)
-				print('Executing command: ' + ' '.join(cmd))
-			if dryrun:
-				return None
-			_execute_fn = subprocess.Popen
-			if wait:
-				_execute_fn = subprocess.run
+					print('Ignoring file, TryExec not found or not executable file: %s' % executable, file=sys.stderr)
+				return
+
+		path = self.Path
+		cmd = self._build_cmd(exec_string=self.Exec, needs_terminal=self.Terminal, term=term)
+		if not cmd:
+			raise ApplicationExecException('Failed to build command string.')
+		if dryrun or verbose:
+			if verbose:
+				print('Autostart file: %s' % self.filename)
 			if path:
-				return _execute_fn(cmd, cwd=path, env=os.environ)
-			return _execute_fn(cmd, env=os.environ)
+				print('Changing directory to: ' + path)
+			print('Executing command: ' + ' '.join(cmd))
+		if dryrun:
+			return
 
-
-class AutostartFile(Application):
-	"""
-	Implements autostart files
-	"""
-
-	def __init__(self, filename):
-		"""
-		@param	filename	Absolute path to a Desktop Entry File
-		"""
-		super(AutostartFile, self).__init__(filename)
-
-
-class EmptyAutostartFile(Application):
-	"""
-	Workaround for empty autostart files that don't contain the necessary data
-	"""
-
-	def __init__(self, filename):
-		"""
-		@param	filename	Absolute path to a Desktop Entry File
-		"""
-		try:
-			super(EmptyAutostartFile, self).__init__(filename)
-		except DesktopEntryTypeException:
-			# ignore the missing type information
-			pass
+		_execute_fn = subprocess.Popen
+		if wait:
+			_execute_fn = subprocess.run
+		if path:
+			return _execute_fn(cmd, cwd=path, env=os.environ)
+		return _execute_fn(cmd, env=os.environ)
 
 
 # local methods
@@ -570,33 +527,28 @@ def which(filename):
 				return _f
 
 
-def get_autostart_directories():
+def get_autostart_directories(args):
 	"""
 	Generate the list of autostart directories
 	"""
-	autostart_directories = []  # autostart directories, ordered by preference
-
 	if args.searchpaths:
-		for p in args.searchpaths[0].split(os.pathsep):
-			path = os.path.expanduser(p)
-			path = os.path.expandvars(path)
-			autostart_directories += [path]
-	else:
-		# generate list of autostart directories
-		if os.environ.get('XDG_CONFIG_HOME', None):
-			autostart_directories.append(os.path.join(os.environ.get('XDG_CONFIG_HOME'), 'autostart'))
-		else:
-			autostart_directories.append(os.path.join(os.environ['HOME'], '.config', 'autostart'))
+		return [os.path.expandvars(os.path.expanduser(p)) for p in
+				args.searchpaths[0].split(os.pathsep)]
 
-		if os.environ.get('XDG_CONFIG_DIRS', None):
-			for d in os.environ['XDG_CONFIG_DIRS'].split(os.pathsep):
-				if not d:
-					continue
-				autostart_dir = os.path.join(d, 'autostart')
-				if autostart_dir not in autostart_directories:
-					autostart_directories.append(autostart_dir)
-		else:
-			autostart_directories.append(os.path.sep + os.path.join('etc', 'xdg', 'autostart'))
+	# generate list of autostart directories
+	autostart_directories = []
+
+	config_home = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+	autostart_directories.append(os.path.join(config_home, "autostart"))
+
+	config_dirs = os.environ.get("XDG_CONFIG_DIRS", "/etc/xdg")
+	for d in config_dirs.split(os.pathsep):
+		if not d:
+			continue
+		autostart_dir = os.path.join(d, "autostart")
+		if autostart_dir not in autostart_directories:
+			autostart_directories.append(autostart_dir)
+
 	return autostart_directories
 
 
@@ -606,64 +558,55 @@ def get_autostart_files(args, verbose=False):
 
 	TODO: do filetype recognition according to spec
 	"""
+	seen_files = set()
 	autostart_files = []  # autostart files, excluding files marked as hidden
-	non_autostart_files = []
 
-	for d in get_autostart_directories():
-		for _f in glob.glob1(d, '*.desktop'):
-			_f = os.path.join(d, _f)
-			af = None
-
-			if os.path.isfile(_f) or os.path.islink(_f):
-				try:
-					af = AutostartFile(_f)
-				except DesktopEntryTypeException as ex:
-					af = EmptyAutostartFile(_f)
-					if af not in autostart_files and not af in non_autostart_files:
-						non_autostart_files.append(af)
-					continue
-				except ValueError as ex:
-					if verbose:
-						print(ex, file=sys.stderr)
-					continue
-				except IOError as ex:
-					if verbose:
-						print(ex, file=sys.stderr)
-					continue
-			else:
+	for d in get_autostart_directories(args):
+		for entry in scandir(d):
+			if not entry.is_file() or not entry.name.endswith(".desktop"):
 				if verbose:
-					print('Ignoring unknown file: %s' % _f, file=sys.stderr)
+					print('Ignoring non-file: %s' % entry.path, file=sys.stderr)
+				continue
+			elif entry.name in seen_files:
+				if verbose:
+					print('Ignoring file, overridden by other autostart file: %s' % entry.path, file=sys.stderr)
+				continue
+
+			seen_files.add(entry.name)
+			try:
+				app = Application(entry.path)
+			except DesktopEntryTypeException as ex:
+				continue
+			except ValueError as ex:
+				if verbose:
+					print(ex, file=sys.stderr)
+				continue
+			except IOError as ex:
+				if verbose:
+					print(ex, file=sys.stderr)
 				continue
 
 			if verbose:
-				if af.NotShowIn:
-					print('Not show in environments %s: %s' % (', '.join(af.NotShowIn), af.filename), file=sys.stderr)
-				if af.OnlyShowIn:
-					print('Only show in environments %s: %s' % (', '.join(af.OnlyShowIn), af.filename), file=sys.stderr)
-			if af in autostart_files or af in non_autostart_files:
+				if app.NotShowIn:
+					print('Not show in environments %s: %s' % (', '.join(app.NotShowIn), app.filename), file=sys.stderr)
+				if app.OnlyShowIn:
+					print('Only show in environments %s: %s' % (', '.join(app.OnlyShowIn), app.filename), file=sys.stderr)
+
+			if app.Hidden:
 				if verbose:
-					print('Ignoring file, overridden by other autostart file: %s' % af.filename, file=sys.stderr)
+					print('Ignoring file, hidden attribute is set: %s' % app.filename, file=sys.stderr)
 				continue
-			elif af.Hidden:
+			elif app.OnlyShowIn and not (args.environment and args.environment in app.OnlyShowIn):
 				if verbose:
-					print('Ignoring file, hidden attribute is set: %s' % af.filename, file=sys.stderr)
-				non_autostart_files.append(af)
+					print('Ignoring file, it must only start in specific environments (%s): %s' % (', '.join(app.OnlyShowIn), app.filename), file=sys.stderr)
 				continue
-			elif af.OnlyShowIn and not (args.environment and args.environment in af.OnlyShowIn):
+			elif app.NotShowIn and args.environment and args.environment in app.NotShowIn:
 				if verbose:
-					print('Ignoring file, it must only start in specific environments (%s): %s' % (', '.join(af.OnlyShowIn), af.filename), file=sys.stderr)
-				non_autostart_files.append(af)
-				continue
-			elif af.NotShowIn and args.environment and args.environment in af.NotShowIn:
-				if verbose:
-					print('Ignoring file, it must not start in specific environments (%s): %s' % (', '.join(af.NotShowIn), af.filename), file=sys.stderr)
-				non_autostart_files.append(af)
+					print('Ignoring file, it must not start in specific environments (%s): %s' % (', '.join(app.NotShowIn), app.filename), file=sys.stderr)
 				continue
 
-			autostart_files.append(af)
-	if verbose:
-		for i in non_autostart_files:
-			print('Ignoring empty file: %s' % i.filename, file=sys.stderr)
+			autostart_files.append(app)
+
 	return sorted(autostart_files)
 
 
@@ -689,6 +632,7 @@ def _autostart(args):
 		except Exception as ex:
 			exit_value = 1
 			print("Execution failed: %s%s%s" % (app.filename, os.linesep, ex), file=sys.stderr)
+	return exit_value
 
 
 def _run(args):
@@ -805,7 +749,7 @@ if __name__ == '__main__':
 			description='dex, DesktopEntry Execution, is a program to generate and execute DesktopEntry files of the type Application', epilog='Example usage: list autostart programs: dex -ad')
 	parser.add_argument("--test", action="store_true", dest="test", help="perform a self-test")
 	parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="verbose output")
-	parser.add_argument("-V", "--version", action="store_true", dest="version", help="display version information")
+	parser.add_argument("-V", "--version", action="version", version="%%(prog)s %s" % __version__)
 	parser.add_argument('files', nargs='*', help="DesktopEntry files")
 
 	property = parser.add_argument_group('property')
@@ -835,8 +779,4 @@ if __name__ == '__main__':
 	elif args.property:
 		args.func = _property
 
-	# display version information
-	if args.version:
-		print("dex %s" % __version__)
-	else:
-		sys.exit(args.func(args))
+	sys.exit(args.func(args))
