@@ -19,6 +19,9 @@ Options
 +====================================+============================================================+
 | -h, --help                         | Show a help message and exit                               |
 +------------------------------------+------------------------------------------------------------+
+| --action ACTION                    | Identifier of an "additional application action" to        |
+|                                    | operate on. Also known as a quicklist/jumplist entry.      |
++------------------------------------+------------------------------------------------------------+
 | -a, --autostart                    | Autostart programs                                         |
 +------------------------------------+------------------------------------------------------------+
 | -c, --create PATH                  | Create a DesktopEntry file for the program at the given    |
@@ -34,8 +37,9 @@ Options
 +------------------------------------+------------------------------------------------------------+
 | -p PROPERTY, --property PROPERTY   | Display DesktopEntry property value. Supported properties  |
 |                                    | are: Type, Version, Name, NoDisplay, Hidden, OnlyShowIn,   |
-|                                    | NotShowIn, TryExec, Exec, Path, Terminal, StartupNotify,   |
-|                                    | StartupWMClass, URL                                        |
+|                                    | NotShowIn, TryExec, Exec, Path, Terminal, Actions,         |
+|                                    | StartupNotify, StartupWMClass, URL. For ACTIONs, only Name |
+|                                    | and Exec are supported.                                    |
 +------------------------------------+------------------------------------------------------------+
 | -s, --search-paths SEARCHPATHS     | Colon separated list of paths to search for desktop files, |
 |                                    | overriding the default search list                         |
@@ -97,6 +101,10 @@ Execute a single program (with Terminal=true in the desktop file) in gnome-termi
 Execute a single program and block until it exits.
 
         ``dex --wait nvim.desktop``
+
+Execute a specifified application action.
+
+        ``dex --action new-private-window firefox.desktop``
 
 Autostart Alternative
 ---------------------
