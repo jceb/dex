@@ -17,6 +17,9 @@ Options
 -h, --help
         Show this help message and exit
 
+--action ACTION
+        Identifier of an "additional application action" to operate on. Also known as a quicklist/jumplist entry.
+
 -a, --autostart
         Autostart programs
 
@@ -30,7 +33,7 @@ Options
         Specify the Desktop Environment an autostart should be performed for; works only in combination with --autostart
 
 -p PROPERTY, --property PROPERTY
-        Display DesktopEntry property value. Supported properties are: Type, Version, Name, NoDisplay, Hidden, OnlyShowIn, NotShowIn, TryExec, Exec, Path, Terminal, StartupNotify, StartupWMClass, URL
+        Display DesktopEntry property value. Supported properties are: Type, Version, Name, NoDisplay, Hidden, OnlyShowIn, NotShowIn, TryExec, Exec, Path, Terminal, Actions, StartupNotify, StartupWMClass, URL. For ACTIONs, only Name and Exec are supported.
 
 -s SEARCHPATHS, --search-paths SEARCHPATHS
         Colon separated list of paths to search for desktop files, overriding the default search list
@@ -95,3 +98,7 @@ Execute a single program (with Terminal=true in the desktop file) in gnome-termi
 Execute a single program and block until it exits.
 
         :program:`dex --wait nvim.desktop`
+
+Execute a specifified application action.
+
+        :program:`dex --action new-private-window firefox.desktop`
