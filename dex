@@ -31,10 +31,15 @@
 
 import glob
 import os
+import re
 import subprocess
 import sys
 
 __version__ = "0.10.1"
+
+GRP_DESKTOPENTRY = 'Desktop Entry'
+
+ACTION_GROUP_RE = re.compile(r'Desktop Action (.+)')
 
 
 # DesktopEntry exceptions
@@ -55,11 +60,22 @@ class ApplicationExecException(Exception):
 		return repr(self.value)
 
 
+def _action_to_group(action):
+	return "Desktop Action %s" % (action,) if action else GRP_DESKTOPENTRY
+
+
+def _group_to_action(group):
+	match = ACTION_GROUP_RE.match(group)
+	if not match:
+		return None
+	return match.group(1)
+
+
 # DesktopEntry class definitions
 class DesktopEntry(object):
 	"""
 	Implements some parts of Desktop Entry specification:
-	http://standards.freedesktop.org/desktop-entry-spec/desktop-entry-spec-1.1.html
+	https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-1.1.html
 	"""
 	def __init__(self, filename=None):
 		"""
@@ -129,7 +145,6 @@ class DesktopEntry(object):
 	def load(self):
 		"""Load or reload contents of desktop entry file"""
 		self.groups = {}     # clear settings
-		grp_desktopentry = 'Desktop Entry'
 
 		_f = open(self.filename, 'r')
 		current_group = None
@@ -167,8 +182,8 @@ class DesktopEntry(object):
 		finally:
 			_f.close()
 
-		if grp_desktopentry not in self.groups:
-			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry group is missing." % (self.filename, ))
+		if GRP_DESKTOPENTRY not in self.groups:
+			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because group '%s' is missing." % (self.filename, GRP_DESKTOPENTRY))
 		if not (self.Type and self.Name):
 			if self.Type != 'Service':
 				# allow files with type Service and no Name
@@ -185,6 +200,32 @@ class DesktopEntry(object):
 		else:
 			raise DesktopEntryTypeException("'%s' is not a valid Desktop Entry because Type '%s' is unknown." % (self.filename, self.Type))
 
+		# Validate actions
+		# Regarding the use of the word "ignored" in the specification: (https://specifications.freedesktop.org/desktop-entry-spec/desktop-entry-spec-1.1.html#extra-actions):
+		# 1. "Action identifier: [...] Each identifier [listed in Actions] is associated with an action group that must be present in the .desktop file.
+		# 2. "Action identifier: [...] It is not valid to have an action group for an action identifier not mentioned in the Actions key. Such an action group must be ignored by implementors.
+		# 3. "Action Keys: The following keys are supported within each action group. If a REQUIRED key is not present in an action group, then the implementor should ignore this action."
+		# Considering these points together, any action that is "ignored" should cause invalidation from points #1 and #2
+		if _type == 'Application':
+			for action in self.Actions:
+				if not action:
+					continue
+				group = _action_to_group(action)
+				if group not in self.groups:
+					raise DesktopEntryTypeException(
+						"'%s' is not a valid Desktop Entry because Action '%s' requires group '%s'." % (self.filename, action, group))
+				# Name is required, critical error (see above)
+				if not self.Name:
+					raise DesktopEntryTypeException(
+						"'%s' is not a valid Desktop Entry because group '%s' requires Name." % (self.filename, group))
+			for group in self.groups:
+				action = _group_to_action(group)
+				if not action:
+					continue
+				if action not in self.Actions:
+					raise DesktopEntryTypeException(
+						"'%s' is not a valid Desktop Entry because group '%s' has no corresponding entry under Actions." % (self.filename, group))
+
 	# another name for load
 	reload = load
 
@@ -198,7 +239,7 @@ class DesktopEntry(object):
 			for key in self.groups[group]:
 				fileobject.write('%s=%s\n' % (key, self.groups[group][key]))
 
-	def set_value(self, key, value, group='Desktop Entry'):
+	def set_value(self, key, value, group=GRP_DESKTOPENTRY):
 		""" Set a key, value pair in group
 
 		@param	key	Key
@@ -210,7 +251,7 @@ class DesktopEntry(object):
 		self.groups[group][key] = str(value)
 		return value
 
-	def _get_value(self, key, group='Desktop Entry', default=None):
+	def _get_value(self, key, group=GRP_DESKTOPENTRY, default=None):
 		if not self.groups:
 			self.load()
 		if group not in self.groups:
@@ -220,7 +261,7 @@ class DesktopEntry(object):
 			return default
 		return grp[key]
 
-	def get_boolean(self, key, group='Desktop Entry', default=False):
+	def get_boolean(self, key, group=GRP_DESKTOPENTRY, default=False):
 		val = self._get_value(key, group=group, default=default)
 		if type(val) == bool:
 			return val
@@ -230,23 +271,23 @@ class DesktopEntry(object):
 			return False
 		raise ValueError("'%s's value '%s' in group '%s' is not a boolean value." % (key, val, group))
 
-	def get_list(self, key, group='Desktop Entry', default=None):
+	def get_list(self, key, group=GRP_DESKTOPENTRY, default=None):
 		list_of_strings = []
 		res = self.get_string(key, group=group, default=default)
 		if type(res) == str:
 			list_of_strings = [x for x in res.split(';') if x]
 		return list_of_strings
 
-	def get_string(self, key, group='Desktop Entry', default=''):
+	def get_string(self, key, group=GRP_DESKTOPENTRY, default=''):
 		return self._get_value(key, group=group, default=default)
 
-	def get_strings(self, key, group='Desktop Entry', default=''):
+	def get_strings(self, key, group=GRP_DESKTOPENTRY, default=''):
 		raise Exception("Not implemented yet.")
 
-	def get_localestring(self, key, group='Desktop Entry', default=''):
+	def get_localestring(self, key, group=GRP_DESKTOPENTRY, default=''):
 		raise Exception("Not implemented yet.")
 
-	def get_numeric(self, key, group='Desktop Entry', default=0.0):
+	def get_numeric(self, key, group=GRP_DESKTOPENTRY, default=0.0):
 		val = self._get_value(key, group=group, default=default)
 		if type(val) == float:
 			return val
@@ -328,6 +369,10 @@ class DesktopEntry(object):
 	@property
 	def URL(self):
 		return self.get_string('URL')
+
+	@property
+	def Actions(self):
+		return self.get_list('Actions')
 
 
 class Application(DesktopEntry):
@@ -501,6 +546,33 @@ class Application(DesktopEntry):
 
 		return cmd
 
+
+class ExecutableApplication(Application):
+	"""
+	Application that can be executed
+	"""
+
+	def __init__(self, filename, action=None):
+		self.action = action
+		self.action_group_name = _action_to_group(action)
+		super().__init__(filename)
+
+	@property
+	def Name(self):
+		return self.get_string('Name', self.action_group_name)
+
+	@property
+	def Icon(self):
+		if 'Icon' in self.groups[self.action_group_name]:
+			return self.get_string('Icon', self.action_group_name)
+		return self.get_string('Icon', GRP_DESKTOPENTRY)
+
+	@property
+	def Exec(self):
+		if 'Exec' in self.groups[self.action_group_name]:
+			return super().get_string('Exec', self.action_group_name)
+		return super().get_string('Exec', GRP_DESKTOPENTRY)
+
 	def execute(self, term=None, wait=False, dryrun=False, verbose=False):
 		"""
 		Execute application
@@ -518,7 +590,9 @@ class Application(DesktopEntry):
 				raise ApplicationExecException('Failed to build command string.')
 			if dryrun or verbose:
 				if verbose:
-					print('Autostart file: %s' % self.filename)
+					print('DesktopEntry file: %s' % self.filename)
+				if self.action:
+					print('Desktop action: %s' % self.action)
 				if path:
 					print('Changing directory to: ' + path)
 				print('Executing command: ' + ' '.join(cmd))
@@ -532,7 +606,7 @@ class Application(DesktopEntry):
 			return _execute_fn(cmd, env=os.environ)
 
 
-class AutostartFile(Application):
+class AutostartFile(ExecutableApplication):
 	"""
 	Implements autostart files
 	"""
@@ -706,7 +780,7 @@ def _run(args):
 	else:
 		for f in args.files:
 			try:
-				app = Application(f)
+				app = ExecutableApplication(f, args.action)
 				app.execute(term=args.term, wait=args.wait, dryrun=args.dryrun, verbose=args.verbose)
 			except ValueError as ex:
 				print(ex, file=sys.stderr)
@@ -777,7 +851,7 @@ def _property(args):
 			'Terminal',
 			'StartupNotify',
 			'StartupWMClass',
-			'URL'
+			'Actions',
 		)
 		property = args.property[0]
 		for f in args.files:
@@ -814,6 +888,7 @@ if __name__ == '__main__':
 	run = parser.add_argument_group('run')
 	run.add_argument("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
 	run.add_argument("-d", "--dry-run", action="store_true", dest="dryrun", help="dry run, don't execute any command")
+	run.add_argument("-x", "--action", dest="action", help="action")
 	run.add_argument("-e", "--environment", dest="environment", help="specify the Desktop Environment an autostart should be performed for; works only in combination with --autostart", default=os.environ.get('XDG_CURRENT_DESKTOP'))
 	run.add_argument("-s", "--search-paths", nargs=1, dest="searchpaths", help="colon separated list of paths to search for desktop files, overriding the default search list")
 	run.add_argument("--term", dest="term", help="the terminal emulator that will be used to run the program if Terminal=true is set in the desktop file, defaults to x-terminal-emulator")
@@ -823,7 +898,7 @@ if __name__ == '__main__':
 	create.add_argument("-c", "--create", nargs='+', dest="create", help="create a DesktopEntry file for the given program. If a second argument is provided it's taken as output filename or written to stdout (filename: -). By default a new file with the postfix .desktop is created")
 	create.add_argument("-t", "--target-directory", nargs=1, dest="targetdir", help="create files in target directory")
 
-	parser.set_defaults(func=_run, term="x-terminal-emulator", wait=False, dryrun=False, test=False, autostart=False, verbose=False)
+	parser.set_defaults(func=_run, term="x-terminal-emulator", wait=False, dryrun=False, test=False, autostart=False, verbose=False, action=None)
 
 	args = parser.parse_args()
 	if args.autostart:
