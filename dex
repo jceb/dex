@@ -318,6 +318,10 @@ class DesktopEntry(object):
 		return self.get_strings('MimeType')
 
 	@property
+	def Actions(self):
+		return self.get_list('Actions')
+
+	@property
 	def Categories(self):
 		return self.get_strings('Categories')
 
@@ -482,13 +486,15 @@ class Application(DesktopEntry):
 
 		return cmd
 
-	def execute(self, term=None, wait=False, dryrun=False, verbose=False):
+	def execute(self, action=None, term=None, wait=False, dryrun=False, verbose=False):
 		"""
-		Execute application
+		Execute application or, if given, a specific action
 		@return	Return subprocess.Popen object
 		"""
 		if self.TryExec:
 			executable = self.TryExec
+			if action:
+				executable = Action(owner=self, identifier=action).Exec
 			if not os.path.isabs(executable):
 				executable = which(executable)
 			if not os.access(executable, mode=os.F_OK | os.X_OK):
@@ -515,6 +521,31 @@ class Application(DesktopEntry):
 		if path:
 			return _execute_fn(cmd, cwd=path, env=os.environ)
 		return _execute_fn(cmd, env=os.environ)
+
+
+class Action(object):
+	def __init__(self, owner, identifier):
+		"""
+		@param	owner	The Application that this action is part of
+		@param	identifier	The Desktop Action's identifier (not its Name!)
+		"""
+		self._owner = owner
+		self._id = identifier
+
+	def group_name(self):
+		return "Desktop Action %s" % self._id
+
+	@property
+	def identifier(self):
+		return self._id
+
+	@property
+	def Name(self):
+		return self._owner.get_string('Name', group=self.group_name())
+
+	@property
+	def Exec(self):
+		return self._owner.get_string('Exec', group=self.group_name())
 
 
 # local methods
@@ -637,7 +668,7 @@ def _autostart(args):
 
 def _run(args):
 	"""
-	execute specified DesktopEntry files
+	execute specified DesktopEntry files, or specified action of each file
 	"""
 	if args.dryrun and args.verbose:
 		print('Dry run, nothing is executed.', file=sys.stderr)
@@ -651,7 +682,7 @@ def _run(args):
 		for f in args.files:
 			try:
 				app = Application(f)
-				app.execute(term=args.term, wait=args.wait, dryrun=args.dryrun, verbose=args.verbose)
+				app.execute(action=args.action, term=args.term, wait=args.wait, dryrun=args.dryrun, verbose=args.verbose)
 			except ValueError as ex:
 				print(ex, file=sys.stderr)
 			except IOError as ex:
@@ -719,19 +750,32 @@ def _property(args):
 			'Exec',
 			'Path',
 			'Terminal',
+			'Actions',
 			'StartupNotify',
 			'StartupWMClass',
 			'URL'
+		)
+		action_properties = (
+			'Name',
+			'Exec'
 		)
 		property = args.property[0]
 		for f in args.files:
 			try:
 				app = Application(f)
-				if property in properties:
+
+				allowed_properties = properties
+				error_keyword = "Entry"
+				if args.action:
+					app = Action(owner=app, identifier=args.action)
+					allowed_properties = action_properties
+					error_keyword = "Action"
+
+				if property in allowed_properties:
 					print(getattr(app, property))
 				else:
 					exit_value = 1
-					print("'%s' is not a valid Desktop Entry property." % property, file=sys.stderr)
+					print("'%s' is not a valid Desktop %s property." % (property, error_keyword), file=sys.stderr)
 			except ValueError as ex:
 				print(ex, file=sys.stderr)
 			except IOError as ex:
@@ -747,13 +791,14 @@ if __name__ == '__main__':
 	from argparse import ArgumentParser
 	parser = ArgumentParser(usage='%(prog)s [options] [DesktopEntryFile [DesktopEntryFile ...]]',
 			description='dex, DesktopEntry Execution, is a program to generate and execute DesktopEntry files of the type Application', epilog='Example usage: list autostart programs: dex -ad')
+	parser.add_argument("--action", dest="action", help="identifier of an \"additional application action\" to operate on. Also known as a quicklist/jumplist entry")
 	parser.add_argument("--test", action="store_true", dest="test", help="perform a self-test")
 	parser.add_argument("-v", "--verbose", action="store_true", dest="verbose", help="verbose output")
 	parser.add_argument("-V", "--version", action="version", version="%%(prog)s %s" % __version__)
 	parser.add_argument('files', nargs='*', help="DesktopEntry files")
 
 	property = parser.add_argument_group('property')
-	property.add_argument("-p", "--property", nargs=1, dest="property", help="display DesktopEntry property value. Supported properties are: Type, Version, Name, NoDisplay, Hidden, OnlyShowIn, NotShowIn, TryExec, Exec, Path, Terminal, StartupNotify, StartupWMClass, URL")
+	property.add_argument("-p", "--property", nargs=1, dest="property", help="display DesktopEntry property value. Supported properties are: Type, Version, Name, NoDisplay, Hidden, OnlyShowIn, NotShowIn, TryExec, Exec, Path, Terminal, Actions, StartupNotify, StartupWMClass, URL. For ACTIONs, only Name and Exec are supported")
 
 	run = parser.add_argument_group('run')
 	run.add_argument("-a", "--autostart", action="store_true", dest="autostart", help="autostart programs")
