@@ -5,12 +5,14 @@ MANPREFIX = $(PREFIX)/man
 VERSION = $(shell git tag | tail -n 1)
 TAG = $(NAME)-$(VERSION)
 
+.PHONY: build
 build: dex.1
 
 dex.1: man/dex.rst
 	@echo building the manpage in man/
 	@sphinx-build -b man -D version=$(TAG) -E man . $+
 
+.PHONY: install
 install: dex dex.1 README.rst LICENSE
 	@echo installing executable file to $(DESTDIR)$(PREFIX)/bin
 	@mkdir -p $(DESTDIR)$(PREFIX)/bin
@@ -22,8 +24,10 @@ install: dex dex.1 README.rst LICENSE
 	@mkdir -p $(DESTDIR)$(MANPREFIX)/man1
 	@install -m 0644 dex.1 $(DESTDIR)$(MANPREFIX)/man1/$(NAME).1
 
+.PHONY: tgz
 tgz: source
 
+.PHONY: source
 source: dex dex.1 README.rst LICENSE Makefile CHANGELOG.md
 	@echo "Creating source package: $(TAG).tar.gz"
 	@mkdir $(TAG)
@@ -31,9 +35,12 @@ source: dex dex.1 README.rst LICENSE Makefile CHANGELOG.md
 	@tar czf $(TAG).tar.gz $(TAG)
 	@rm -rf $(TAG)
 
+.PHONY: clean
 clean:
 	@rm -f $(TAG).tar.gz
 	@rm -f dex.1
 	@rm -rf .doctrees
 
-.PHONY: build install tgz source clean
+.PHONY: changelog
+changelog:
+	git cliff -o CHANGELOG.md
