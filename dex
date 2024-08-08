@@ -641,77 +641,80 @@ def get_autostart_files(args, verbose=False):
     autostart_files = []  # autostart files, excluding files marked as hidden
 
     for d in get_autostart_directories(args):
-        for entry in scandir(d):
-            if not entry.is_file() or not entry.name.endswith(".desktop"):
-                if verbose:
-                    print("Ignoring non-file: %s" % entry.path, file=sys.stderr)
-                continue
-            elif entry.name in seen_files:
-                if verbose:
-                    print(
-                        "Ignoring file, overridden by other autostart file: %s"
-                        % entry.path,
-                        file=sys.stderr,
-                    )
-                continue
+        if os.path.exists(d) and os.path.isdir(d):
+            for entry in scandir(d):
+                if not entry.is_file() or not entry.name.endswith(".desktop"):
+                    if verbose:
+                        print("Ignoring non-file: %s" % entry.path, file=sys.stderr)
+                    continue
+                elif entry.name in seen_files:
+                    if verbose:
+                        print(
+                            "Ignoring file, overridden by other autostart file: %s"
+                            % entry.path,
+                            file=sys.stderr,
+                        )
+                    continue
 
-            seen_files.add(entry.name)
-            try:
-                app = Application(entry.path)
-            except DesktopEntryTypeException as ex:
-                continue
-            except ValueError as ex:
-                if verbose:
-                    print(ex, file=sys.stderr)
-                continue
-            except IOError as ex:
-                if verbose:
-                    print(ex, file=sys.stderr)
-                continue
+                seen_files.add(entry.name)
+                try:
+                    app = Application(entry.path)
+                except DesktopEntryTypeException as ex:
+                    continue
+                except ValueError as ex:
+                    if verbose:
+                        print(ex, file=sys.stderr)
+                    continue
+                except IOError as ex:
+                    if verbose:
+                        print(ex, file=sys.stderr)
+                    continue
 
-            if verbose:
-                if app.NotShowIn:
-                    print(
-                        "Not show in environments %s: %s"
-                        % (", ".join(app.NotShowIn), app.filename),
-                        file=sys.stderr,
-                    )
-                if app.OnlyShowIn:
-                    print(
-                        "Only show in environments %s: %s"
-                        % (", ".join(app.OnlyShowIn), app.filename),
-                        file=sys.stderr,
-                    )
+                if verbose:
+                    if app.NotShowIn:
+                        print(
+                            "Not show in environments %s: %s"
+                            % (", ".join(app.NotShowIn), app.filename),
+                            file=sys.stderr,
+                        )
+                    if app.OnlyShowIn:
+                        print(
+                            "Only show in environments %s: %s"
+                            % (", ".join(app.OnlyShowIn), app.filename),
+                            file=sys.stderr,
+                        )
 
-            if app.Hidden:
-                if verbose:
-                    print(
-                        "Ignoring file, hidden attribute is set: %s" % app.filename,
-                        file=sys.stderr,
-                    )
-                continue
-            elif app.OnlyShowIn and not (
-                args.environment and args.environment in app.OnlyShowIn
-            ):
-                if verbose:
-                    print(
-                        "Ignoring file, it must only start in specific environments (%s): %s"
-                        % (", ".join(app.OnlyShowIn), app.filename),
-                        file=sys.stderr,
-                    )
-                continue
-            elif (
-                app.NotShowIn and args.environment and args.environment in app.NotShowIn
-            ):
-                if verbose:
-                    print(
-                        "Ignoring file, it must not start in specific environments (%s): %s"
-                        % (", ".join(app.NotShowIn), app.filename),
-                        file=sys.stderr,
-                    )
-                continue
+                if app.Hidden:
+                    if verbose:
+                        print(
+                            "Ignoring file, hidden attribute is set: %s" % app.filename,
+                            file=sys.stderr,
+                        )
+                    continue
+                elif app.OnlyShowIn and not (
+                    args.environment and args.environment in app.OnlyShowIn
+                ):
+                    if verbose:
+                        print(
+                            "Ignoring file, it must only start in specific environments (%s): %s"
+                            % (", ".join(app.OnlyShowIn), app.filename),
+                            file=sys.stderr,
+                        )
+                    continue
+                elif (
+                    app.NotShowIn
+                    and args.environment
+                    and args.environment in app.NotShowIn
+                ):
+                    if verbose:
+                        print(
+                            "Ignoring file, it must not start in specific environments (%s): %s"
+                            % (", ".join(app.NotShowIn), app.filename),
+                            file=sys.stderr,
+                        )
+                    continue
 
-            autostart_files.append(app)
+                autostart_files.append(app)
 
     return sorted(autostart_files)
 
