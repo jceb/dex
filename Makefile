@@ -34,5 +34,6 @@ source: dex dex.1 README.rst LICENSE Makefile CHANGELOG.md
 clean:
 	@rm -f $(TAG).tar.gz
 	@rm -f dex.1
+	@rm -rf .doctrees
 
 .PHONY: build install tgz source clean
