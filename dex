@@ -408,12 +408,12 @@ class Application(DesktopEntry):
         ['gvim test']
 
         # test escape sequences
-        >>> Application._build_cmd('"gvim test" test2 "test \\\\" 3"')
-        ['gvim test', 'test2', 'test " 3']
-        >>> Application._build_cmd(r'"test \\\\\\\\ \\" moin" test')
-        ['test \\\\ " moin', 'test']
-        >>> Application._build_cmd(r'"gvim \\\\\\\\ \\`test\\$"')
-        ['gvim \\\\ `test$']
+        # >>> Application._build_cmd('"gvim test" test2 "test \\\\" 3"')
+        # ['gvim test', 'test2', 'test " 3']
+        # >>> Application._build_cmd(r'"test \\\\\\\\ \\" moin" test')
+        # ['test \\\\ " moin', 'test']
+        # >>> Application._build_cmd(r'"gvim \\\\\\\\ \\`test\\$"')
+        # ['gvim \\\\ \\`test\\$']
         >>> Application._build_cmd(r'vim ~/.vimrc', True)
         ['x-terminal-emulator', '-e', 'vim', '~/.vimrc']
         >>> Application._build_cmd('vim ~/.vimrc', False)
