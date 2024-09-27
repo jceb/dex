@@ -1,7 +1,7 @@
 dex
 ===
 
-.. image:: https://github.com/jceb/dex/actions/workflows/test.yml/badge.svg?branch={{ github.ref }}
+.. image:: https://github.com/jceb/dex/actions/workflows/test.yml/badge.svg
    :target: https://github.com/jceb/dex/actions
    :alt: Test Status
 
