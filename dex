@@ -878,10 +878,6 @@ def _property(args):
                 print("Parse failed: %s%s%s" % (f, os.linesep, ex), file=sys.stderr)
     return exit_value
 
-
-a = Application._build_cmd('"gvim test" test2 "test \\\\" 3"')
-sys.exit(0)
-
 # start execution
 if __name__ == "__main__":
     from argparse import ArgumentParser
