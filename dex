@@ -393,7 +393,7 @@ class Application(DesktopEntry):
             )
 
     @classmethod
-    def _build_cmd(cls, exec_string, needs_terminal=False, term="x-terminal-emulator"):
+    def _build_cmd(cls, exec_string:str, needs_terminal=False, term="x-terminal-emulator"):
         """
         # test single and multi argument commands
         >>> Application._build_cmd('gvim')
@@ -408,12 +408,12 @@ class Application(DesktopEntry):
         ['gvim test']
 
         # test escape sequences
-        # >>> Application._build_cmd('"gvim test" test2 "test \\\\" 3"')
-        # ['gvim test', 'test2', 'test " 3']
-        # >>> Application._build_cmd(r'"test \\\\\\\\ \\" moin" test')
-        # ['test \\\\ " moin', 'test']
-        # >>> Application._build_cmd(r'"gvim \\\\\\\\ \\`test\\$"')
-        # ['gvim \\\\ \\`test\\$']
+        >>> Application._build_cmd('"gvim test" test2 "test \\\\" 3"')
+        ['gvim test', 'test2', 'test " 3']
+        >>> Application._build_cmd(r'"test \\\\\\\\ \\" moin" test')
+        ['test \\\\ " moin', 'test']
+        >>> Application._build_cmd(r'"gvim \\\\\\\\ \\`test\\$"')
+        ['gvim \\\\ `test$']
         >>> Application._build_cmd(r'vim ~/.vimrc', True)
         ['x-terminal-emulator', '-e', 'vim', '~/.vimrc']
         >>> Application._build_cmd('vim ~/.vimrc', False)
@@ -501,9 +501,8 @@ class Application(DesktopEntry):
                         continue
 
                 elif c == "\\":
-                    if not in_quote:
-                        in_esc = True
-                        continue
+                    in_esc = True
+                    continue
 
                 elif c == "%" and not (in_quote or in_singlequote):
                     in_fieldcode = True
@@ -879,6 +878,9 @@ def _property(args):
                 print("Parse failed: %s%s%s" % (f, os.linesep, ex), file=sys.stderr)
     return exit_value
 
+
+a = Application._build_cmd('"gvim test" test2 "test \\\\" 3"')
+sys.exit(0)
 
 # start execution
 if __name__ == "__main__":
