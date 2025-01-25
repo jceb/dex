@@ -36,7 +36,7 @@ Options
         Display DesktopEntry property value. Supported properties are: Type, Version, Name, NoDisplay, Hidden, OnlyShowIn, NotShowIn, TryExec, Exec, Path, Terminal, Actions, StartupNotify, StartupWMClass, URL. For ACTIONs, only Name and Exec are supported.
 
 -s SEARCHPATHS, --search-paths SEARCHPATHS
-        Colon separated list of paths to search for desktop files, overriding the default search list
+        Colon separated list of paths to search for desktop files, overriding the default search list. works only in combination with --autostart
 
 -t DIRECTORY, --target-directory DIRECTORY
         Create files in target directory
